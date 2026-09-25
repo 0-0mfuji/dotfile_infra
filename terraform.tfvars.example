@@ -1,0 +1,47 @@
+# cp terraform.tfvars.example terraform.tfvars して編集する。
+# terraform.tfvars 自体はGit管理しない (.gitignore済み)。
+
+storage_pool = "dev-tank"      # Incusに登録済みのZFS storage pool名
+dev_network  = "devbr0"        # Development Network用のbridge名
+
+ssh_public_key = "ssh-ed25519 AAAA... you@macbook"
+
+dev_instances = {
+  lang = {
+    cpu       = 4
+    memory    = "4GiB"
+    disk_size = "50GiB"
+  }
+  cpu = {
+    cpu       = 8
+    memory    = "8GiB"
+    disk_size = "100GiB"
+  }
+  os = {
+    cpu       = 4
+    memory    = "4GiB"
+    disk_size = "50GiB"
+  }
+  fpga = {
+    cpu       = 4
+    memory    = "8GiB"
+    disk_size = "80GiB"
+  }
+  robot = {
+    image     = "images:ubuntu/22.04" # ROS想定
+    cpu       = 4
+    memory    = "8GiB"
+    disk_size = "80GiB"
+  }
+  flutter = {
+    cpu       = 4
+    memory    = "8GiB"
+    disk_size = "80GiB"
+  }
+  video = {
+    cpu       = 8
+    memory    = "16GiB"
+    disk_size = "200GiB"
+    gpu       = true
+  }
+}
