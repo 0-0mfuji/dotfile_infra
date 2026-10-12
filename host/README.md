@@ -19,7 +19,7 @@ sudo ./setup.sh          # 00-base, 10-ssh, 20-network, 30-zfs, 40-incus
 | --- | --- |
 | `00-base` | 基本パッケージ |
 | `10-ssh` | パスワード認証を無効化 (authorized_keysが空なら中断) |
-| `20-network` | WoL永続化 (`wol@<iface>.service`)、Tailscale導入。MACアドレスを表示する |
+| `20-network` | WoL永続化 (`wol@<iface>.service`)、USBコントローラのウェイクアップ無効化 (`usb-wake-off.service`)、Tailscale導入。MACアドレスを表示する |
 | `30-zfs` | ZFSパッケージ導入 (`contrib`有効化) |
 | `40-incus` | Incus導入、`incus-admin`グループへ追加 |
 

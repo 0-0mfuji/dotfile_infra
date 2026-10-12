@@ -22,6 +22,33 @@ EOF
 systemctl daemon-reload
 systemctl enable --now "wol@${iface}.service"
 
+# USBコントローラ(PCIクラス0x0c03)のウェイクアップを無効にする。
+# キーボード/マウス/USBカードのPMEで、Suspend直後に復帰してしまうのを防ぐ。
+# WoLに使う有線NICは対象外 (PCIクラスが違う)。
+cat > /usr/local/sbin/usb-wake-off <<'EOF2'
+#!/bin/sh
+for d in /sys/bus/pci/devices/*; do
+  case "$(cat "$d/class" 2>/dev/null)" in
+    0x0c03*) echo disabled > "$d/power/wakeup" 2>/dev/null || true ;;
+  esac
+done
+EOF2
+chmod 755 /usr/local/sbin/usb-wake-off
+
+cat > /etc/systemd/system/usb-wake-off.service <<'EOF2'
+[Unit]
+Description=Disable wakeup from USB controllers (prevent instant resume after suspend)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/usb-wake-off
+
+[Install]
+WantedBy=multi-user.target
+EOF2
+systemctl daemon-reload
+systemctl enable --now usb-wake-off.service
+
 # NOTE: 公式手順は変わりうるので https://tailscale.com/kb/1038/install-debian を確認すること
 if ! command -v tailscale >/dev/null 2>&1; then
   curl -fsSL https://pkgs.tailscale.com/stable/debian/trixie.noarmor.gpg \
