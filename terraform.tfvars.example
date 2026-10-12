@@ -19,6 +19,7 @@ dev_instances = {
     disk_size = "100GiB"
   }
   os = {
+    packages  = ["qemu-system-x86", "nasm", "gdb", "make"]
     cpu       = 4
     memory    = "4GiB"
     disk_size = "50GiB"
@@ -29,7 +30,7 @@ dev_instances = {
     disk_size = "80GiB"
   }
   robot = {
-    image     = "images:ubuntu/22.04" # ROS想定
+    image     = "images:ubuntu/22.04/cloud" # ROS想定
     cpu       = 4
     memory    = "8GiB"
     disk_size = "80GiB"

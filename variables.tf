@@ -25,11 +25,13 @@ variable "dev_instances" {
     dotfiles_server の config/projects.conf の instance列 ("<key>-dev") と対応させる。
   EOT
   type = map(object({
-    image     = optional(string, "images:debian/13")
+    image     = optional(string, "images:debian/13/cloud")
     type      = optional(string, "container") # "container" | "virtual-machine"
     cpu       = optional(number, 4)
     memory    = optional(string, "4GiB")
     disk_size = optional(string, "50GiB")
     gpu       = optional(bool, false)
+    packages  = optional(list(string), []) # 基本パッケージに加えてこのInstanceに入れるaptパッケージ
+    ip        = optional(string) # Development Network内の固定IPv4 (例: "10.10.0.11")
   }))
 }

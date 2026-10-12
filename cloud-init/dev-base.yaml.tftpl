@@ -1,7 +1,6 @@
 #cloud-config
 package_update: true
-packages:
-  - openssh-server
+packages: ${jsonencode(packages)}
 
 users:
   - default
@@ -13,3 +12,7 @@ users:
       - ${ssh_public_key}
 
 ssh_pwauth: false
+
+# パスワード欄が"!"(ロック)だとsshdが公開鍵も拒否する。"*"ならパスワードログイン不可のまま鍵は通る
+runcmd:
+  - [usermod, -p, "*", dev]

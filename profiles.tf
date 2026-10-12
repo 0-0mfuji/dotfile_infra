@@ -7,7 +7,7 @@ resource "incus_profile" "dev_base" {
     name = "root"
     type = "disk"
     properties = {
-      pool = var.storage_pool
+      pool = incus_storage_pool.dev.name
       path = "/"
       size = "50GiB"
     }
@@ -17,7 +17,7 @@ resource "incus_profile" "dev_base" {
     name = "eth0"
     type = "nic"
     properties = {
-      network = var.dev_network
+      network = incus_network.dev.name
     }
   }
 }

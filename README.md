@@ -38,13 +38,26 @@ networks.tf                 Development Network (bridge) の定義
 profiles.tf                  共通profile (dev-base) / GPU passthrough profile
 instances.tf                 dev_instances変数をfor_eachしてInstanceを作成
 outputs.tf                   作成されたInstance名の一覧
-cloud-init/dev-base.yaml.tftpl   Instance初期化用cloud-init (SSH公開鍵の投入等)
+cloud-init/dev-base.yaml.tftpl   Instance初期化用cloud-init (devユーザー・SSH公開鍵・パッケージ)
 terraform.tfvars.example     設定例 (ファイル名はOpenTofuでも変更不要)
 ```
 
 Instance名は `<key>-dev` (例: `lang` → `lang-dev`) になっており、
 dotfiles_server の `config/projects.conf` の instance列・SSHのHost名と
 命名規則を合わせている。
+
+## dev_instances の項目
+
+`terraform.tfvars` の `dev_instances` に、keyごと(`<key>-dev` というInstanceになる)に書く。
+
+| 項目 | 既定値 | 内容 |
+| --- | --- | --- |
+| `image` | `images:debian/13/cloud` | イメージ。cloud-initを使うため `/cloud` 版が必要 |
+| `type` | `container` | `container` または `virtual-machine` |
+| `cpu` / `memory` / `disk_size` | `4` / `4GiB` / `50GiB` | リソース上限 |
+| `gpu` | `false` | `true` でGPU passthrough profileを付与 |
+| `ip` | なし | Development Network内の固定IPv4 (例: `10.10.0.11`)。SSH設定と合わせる |
+| `packages` | `[]` | 基本パッケージ (`git` `curl` `build-essential` 等) に加えて入れるaptパッケージ |
 
 ## 使い方
 
@@ -67,6 +80,11 @@ tofu apply
 
 ## 注意事項
 
+- **cloud-initはInstanceの初回起動時にしか実行されない。** `packages` などを変えても、
+  既存のInstanceには反映されない。反映するには作り直す
+  (`tofu apply -replace='incus_instance.dev["os"]'`)。
+- **作り直すとInstance内のデータ (ソースコード含む) は消える。** 先にGitHubへpushすること。
+- 作成される `dev` ユーザーは、パスワードなしでsudoを使える (コンテナ内のみ。ログインは公開鍵のみ)。
 - `storage.tf` / `networks.tf` の資産には `prevent_destroy` を付けている。
   誤った `tofu destroy` で開発データ・プロジェクトデータやNetwork設定が
   消えるのを防ぐため。
