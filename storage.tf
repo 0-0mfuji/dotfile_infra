@@ -1,11 +1,11 @@
-# 物理構成のZFS mirror (2TB NVMe x2) は事前にホスト側で `zpool create` 済みとし、
-# ここではその既存poolをIncusのstorage poolとして登録するだけを扱う。
+# ZFS pool/datasetは事前にホスト側 (host/storage-init) で作成済みとし、
+# ここではその既存datasetをIncusのstorage poolとして登録するだけを扱う。
 resource "incus_storage_pool" "dev" {
   name   = var.storage_pool
   driver = "zfs"
 
   config = {
-    source = var.storage_pool
+    source = var.zfs_source
   }
 
   # 誤って `terraform destroy` した際に開発データ・プロジェクトデータが

@@ -1,7 +1,8 @@
 # cp terraform.tfvars.example terraform.tfvars して編集する。
 # terraform.tfvars 自体はGit管理しない (.gitignore済み)。
 
-storage_pool = "dev-tank"      # Incusに登録済みのZFS storage pool名
+storage_pool = "dev"           # Incus上のstorage pool名
+zfs_source   = "dev-tank/incus" # host/storage-init が作成したZFS dataset
 dev_network  = "devbr0"        # Development Network用のbridge名
 
 ssh_public_key = "ssh-ed25519 AAAA... you@macbook"

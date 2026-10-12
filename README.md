@@ -28,6 +28,7 @@ MacBook --(ssh)--> Development Server --(このリポジトリをclone)--> tofu 
 ## 構成
 
 ```
+host/                     Debianホストの構築 (SSH/WoL/Tailscale/ZFS/Incus導入、ディスク初期化)
 install.sh                Development ServerへOpenTofu CLIをインストールする
 versions.tf              provider バージョン制約 ("terraform"ブロックのまま。OpenTofu互換)
 provider.tf               incus provider設定 (ローカルソケット接続)
@@ -47,9 +48,10 @@ dotfiles_server の `config/projects.conf` の instance列・SSHのHost名と
 
 ## 使い方
 
-前提: Development Server上に Incus, 対象イメージが利用できること。
-ZFS poolとDevelopment Network用のbridgeは事前にホスト側で用意しておく
-(このリポジトリは既存のpool/networkをIncusへ登録するだけ)。
+前提: 最小インストール直後のDebian 13 (UEFI) から、Incusを動かせる状態にする
+`host/` の手順を先に済ませておくこと ([host/README.md](host/README.md))。
+ZFS dataset (`dev-tank/incus`) は `host/storage-init` が作り、このリポジトリは
+それをIncusのstorage poolとして登録する。
 
 ```sh
 # OpenTofu CLIが未導入の場合のみ (Debian: APT経由でインストールされる)

@@ -1,5 +1,11 @@
 variable "storage_pool" {
-  description = "開発/プロジェクトデータ用ZFS storage pool名 (Incusへ登録済みの既存pool)"
+  description = "Incus上のstorage pool名 (任意)"
+  type        = string
+  default     = "dev"
+}
+
+variable "zfs_source" {
+  description = "storage poolの実体となる既存ZFS dataset (host/storage-init が作る <pool>/incus)"
   type        = string
 }
 

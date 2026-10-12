@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# 指定したディスクを【完全に初期化】し、ZFS poolを作成する。破壊的な操作。
+#
+# Usage: sudo ./storage-init /dev/disk/by-id/<disk-id>
+#   例) sudo ./storage-init /dev/disk/by-id/ata-CT1000BX500SSD1_2102E4E5327B
+#
+# 作成するもの:
+#   $POOL            (既定: dev-tank, 単一ディスク・冗長性なし)
+#   $POOL/incus      Incus storage pool用 (OpenTofuの zfs_source に指定)
+#   $POOL/projects   /srv/projects にマウント
+set -euo pipefail
+
+[ "$(id -u)" -eq 0 ] || { echo "run with sudo" >&2; exit 1; }
+command -v zpool >/dev/null || { echo "zpool not found; run: sudo ./setup.sh 30" >&2; exit 1; }
+
+POOL="${POOL:-dev-tank}"
+id_path="${1:?usage: storage-init /dev/disk/by-id/<disk-id>}"
+
+case "$id_path" in
+  /dev/disk/by-id/*) ;;
+  *) echo "refusing: use a stable /dev/disk/by-id/ path, not a kernel name" >&2; exit 1 ;;
+esac
+[ -e "$id_path" ] || { echo "no such disk: $id_path" >&2; exit 1; }
+dev="$(readlink -f "$id_path")"
+
+if [ -n "$(lsblk -nr -o MOUNTPOINTS "$dev" | tr -d '[:space:]')" ]; then
+  echo "refusing: $dev (or its partitions) is mounted" >&2; exit 1
+fi
+if lsblk -nr -o FSTYPE,PARTLABEL "$dev" | grep -Eiq 'ntfs|microsoft'; then
+  echo "refusing: $dev looks like a Windows disk" >&2; exit 1
+fi
+if zpool list -H -o name 2>/dev/null | grep -qx "$POOL"; then
+  echo "refusing: pool '$POOL' already exists" >&2; exit 1
+fi
+
+echo "About to ERASE ALL DATA on:"
+lsblk -o NAME,MODEL,SERIAL,SIZE,FSTYPE "$dev"
+echo
+read -r -p "Type the disk id to confirm [$(basename "$id_path")]: " answer
+[ "$answer" = "$(basename "$id_path")" ] || { echo "aborted." >&2; exit 1; }
+
+# 旧Proxmoxなどのアクティブなvolume groupを解除してから消す
+if command -v pvs >/dev/null; then
+  for vg in $(pvs --noheadings -o vg_name "$dev"* 2>/dev/null | sort -u); do
+    vgchange -an "$vg"
+  done
+fi
+for part in "$dev"?*; do [ -b "$part" ] && wipefs -a "$part"; done
+wipefs -a "$dev"
+sgdisk --zap-all "$dev"
+
+zpool create -o ashift=12 -o autotrim=on \
+  -O compression=zstd -O atime=off -O xattr=sa -O acltype=posixacl \
+  -O mountpoint=none "$POOL" "$id_path"
+zfs create "$POOL/incus"
+zfs create -o mountpoint=/srv/projects "$POOL/projects"
+
+zpool status "$POOL"
+echo "Next: set zfs_source = \"$POOL/incus\" in terraform.tfvars"
