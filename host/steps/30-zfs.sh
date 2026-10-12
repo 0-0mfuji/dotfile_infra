@@ -3,13 +3,18 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-src=/etc/apt/sources.list.d/debian.sources
-if [ -f "$src" ]; then
-  if ! grep -Eq '^Components:.*\bcontrib\b' "$src"; then
-    sed -i -E '/^Components:/ s/$/ contrib/' "$src"
-  fi
+# deb822形式 (debian.sources) と従来形式 (sources.list) の両方に対応する
+deb822=/etc/apt/sources.list.d/debian.sources
+legacy=/etc/apt/sources.list
+if [ -f "$deb822" ]; then
+  grep -Eq '^Components:.*\bcontrib\b' "$deb822" || sed -i -E '/^Components:/ s/$/ contrib/' "$deb822"
+elif [ -f "$legacy" ]; then
+  tmp="$(mktemp)"
+  awk '/^deb(-src)? / && /(deb\.debian\.org|security\.debian\.org)/ && !/contrib/ { sub(/ main/, " main contrib") } { print }' "$legacy" > "$tmp"
+  cat "$tmp" > "$legacy"
+  rm -f "$tmp"
 else
-  echo "warning: $src not found; make sure the 'contrib' component is enabled in your APT sources" >&2
+  echo "error: no Debian APT sources found" >&2; exit 1
 fi
 
 apt-get update

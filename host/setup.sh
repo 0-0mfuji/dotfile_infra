@@ -9,6 +9,7 @@ set -euo pipefail
 
 [ "$(id -u)" -eq 0 ] || { echo "run with sudo: sudo $0 [step ...]" >&2; exit 1; }
 export TARGET_USER="${SUDO_USER:?run via sudo from a normal user, not as root directly}"
+[ "$TARGET_USER" != root ] || { echo "run 'sudo ./setup.sh' from your normal user (mfujimak), not from a root shell" >&2; exit 1; }
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
