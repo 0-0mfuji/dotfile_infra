@@ -47,7 +47,6 @@ if command -v pvs >/dev/null; then
 fi
 for part in "$dev"?*; do [ -b "$part" ] && wipefs -a "$part"; done
 wipefs -a "$dev"
-sgdisk --zap-all "$dev"
 
 zpool create -o ashift=12 -o autotrim=on \
   -O compression=zstd -O atime=off -O xattr=sa -O acltype=posixacl \
