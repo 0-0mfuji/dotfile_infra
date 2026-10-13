@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# DeepSeek Harness のフォークの最新コミットを調べて、versions.env の DSH_COMMIT を書き換える (どこで実行してもよい)。
+# 反映は、commit/push してからサーバーで `git pull && ./provision/run` (コンテナ内でビルドし直して、Webを再起動する)。
+# Usage: provision/bump-dsh [--check]   --check: 書き換えず、差があるかだけ表示する
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=./versions.env
+source "$DIR/versions.env"
+
+latest="$(git ls-remote "$DSH_REPO" "refs/heads/$DSH_BRANCH" | awk '{print $1}')"
+[ -n "$latest" ] || { echo "cannot resolve $DSH_BRANCH of $DSH_REPO" >&2; exit 1; }
+
+if [ "$latest" = "$DSH_COMMIT" ]; then
+  echo "up to date: ${DSH_COMMIT:0:7}"
+  exit 0
+fi
+echo "pinned: ${DSH_COMMIT:0:7}"
+echo "latest: ${latest:0:7}  ($DSH_REPO $DSH_BRANCH)"
+[ "${1:-}" = "--check" ] && exit 0
+
+tmp="$(mktemp)"
+awk -v c="$latest" '/^DSH_COMMIT=/ {print "DSH_COMMIT=" c; next} {print}' "$DIR/versions.env" > "$tmp"
+cat "$tmp" > "$DIR/versions.env"; rm -f "$tmp"
+echo "updated provision/versions.env"
