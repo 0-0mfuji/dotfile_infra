@@ -44,6 +44,5 @@ dev_instances = {
     cpu       = 8
     memory    = "16GiB"
     disk_size = "200GiB"
-    gpu       = true
   }
 }

@@ -22,15 +22,21 @@ resource "incus_profile" "dev_base" {
   }
 }
 
-# CUDA/AI/Blender/FFmpeg等でGPUが必要なInstanceにのみ付与するprofile。
+# GPUを使うコンテナに付与するprofile (既定は全コンテナ。dev_instances の gpu = false で外せる)。
+# GPUは、PCIの番地ではなくベンダーIDで指定する。NVIDIAのGPUを増設すると、コンテナを再起動するだけで見える。
+# 複数のコンテナが、同じGPUを同時に使える (VRAMの隔離は無い)。
 resource "incus_profile" "gpu_passthrough" {
   name = "gpu-passthrough"
 
-  device {
-    name = "gpu0"
-    type = "gpu"
-    properties = {
-      gputype = "physical"
+  dynamic "device" {
+    for_each = toset(var.gpu_vendor_ids)
+    content {
+      name = "gpu-${device.value}"
+      type = "gpu"
+      properties = {
+        gputype  = "physical"
+        vendorid = device.value
+      }
     }
   }
 }

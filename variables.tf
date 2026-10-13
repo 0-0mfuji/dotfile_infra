@@ -25,6 +25,12 @@ variable "mobile_bind_ip" {
   default     = null
 }
 
+variable "gpu_vendor_ids" {
+  description = "コンテナへ渡すGPUのPCIベンダーID。1枚に固定せず、このベンダーのGPUを全て渡す (NVIDIA=10de, AMD=1002, Intel=8086)。ASPEED(1a03)のBMC用VGAは含めない"
+  type        = list(string)
+  default     = ["10de"]
+}
+
 variable "dev_instances" {
   description = <<-EOT
     作成する開発用Instanceの定義。keyがそのままInstance名の接頭辞になり、
@@ -36,7 +42,7 @@ variable "dev_instances" {
     cpu       = optional(number, 4)
     memory    = optional(string, "4GiB")
     disk_size = optional(string, "50GiB")
-    gpu       = optional(bool, false)
+    gpu       = optional(bool, true) # false にすると、このコンテナにはGPUを渡さない
     nesting   = optional(bool, true) # Codexのサンドボックス(bubblewrap)に必要。コンテナ内でprocを再マウントできるようにする
     packages  = optional(list(string), []) # 基本パッケージに加えてこのInstanceに入れるaptパッケージ
     web_port  = optional(number) # サーバーのTailscale IPで待ち受ける、Web UI(コンテナの3080)への転送ポート。スマホ用

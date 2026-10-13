@@ -12,7 +12,7 @@ Debian 13 (UEFI) を最小インストールした直後の状態から、Incus�
 git clone git@github.com:0-0mfuji/dotfile_infra.git
 cd dotfile_infra/host
 
-sudo ./setup.sh          # 00-base, 10-ssh, 20-network, 30-zfs, 40-incus
+sudo ./setup.sh          # 00-base, 10-ssh, 20-network, 30-zfs, 35-nvidia, 40-incus
 ```
 
 | step | 内容 |
@@ -21,6 +21,7 @@ sudo ./setup.sh          # 00-base, 10-ssh, 20-network, 30-zfs, 40-incus
 | `10-ssh` | パスワード認証を無効化 (authorized_keysが空なら中断) |
 | `20-network` | WoL永続化 (`wol@<iface>.service`)、USBコントローラのウェイクアップ無効化 (`usb-wake-off.service`)、Tailscale導入。MACアドレスを表示する |
 | `30-zfs` | ZFSパッケージ導入 (`contrib`有効化) |
+| `35-nvidia` | NVIDIA公式ドライバ (`non-free`、DKMS)。**導入後に再起動が必要**。詳細は dotfiles_server の `docs/gpu.md` |
 | `40-incus` | Incus導入、`incus-admin`グループへ追加 |
 
 特定のstepだけなら `sudo ./setup.sh 00 40`。

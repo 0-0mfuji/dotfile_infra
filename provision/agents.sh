@@ -66,6 +66,44 @@ install_sftp() {
   log "sftp subsystem: enabled"
 }
 
+# GPU: ホストのドライバと同じ版の libcuda1 / nvidia-smi を、同じDebianのAPTから入れる (カーネルモジュールは入れない)。
+# CUDAツールキットは不要: PyTorch / TensorFlow / JAX のpipパッケージは、CUDAのランタイムを同梱していて、libcuda だけで動く。
+install_gpu() {
+  if [ ! -e /dev/nvidiactl ]; then
+    log "gpu: no NVIDIA device in this container; skipping (host driver + tofu gpu device needed)"
+    return
+  fi
+  local d822=/etc/apt/sources.list.d/debian.sources legacy=/etc/apt/sources.list
+  if [ -f "$d822" ]; then
+    grep -Eq '^Components:.*(^|[ :])non-free([ ]|$)' "$d822" || \
+      sudo awk '/^Components:/ && !/(^|[ :])non-free([ ]|$)/ { $0 = $0 " non-free" } { print }' "$d822" | sudo tee "$d822.new" >/dev/null && sudo mv "$d822.new" "$d822"
+  elif [ -f "$legacy" ]; then
+    sudo awk '/^deb(-src)? / && /(deb\.debian\.org|security\.debian\.org)/ && !/ non-free( |$)/ { sub(/ main/, " main non-free") } { print }' "$legacy" | sudo tee "$legacy.new" >/dev/null && sudo mv "$legacy.new" "$legacy"
+  fi
+  if ! command -v nvidia-smi >/dev/null 2>&1 || ! dpkg -s libcuda1 >/dev/null 2>&1; then
+    sudo apt-get update -qq >/dev/null 2>&1
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libcuda1 nvidia-smi >/dev/null 2>&1 || { log "WARNING: could not install libcuda1/nvidia-smi"; return; }
+    log "gpu: libcuda1 + nvidia-smi installed"
+  fi
+  # 自己点検: ホストのドライバとコンテナのライブラリの版が違うと、nvidia-smi が mismatch で失敗する
+  local out; out="$(nvidia-smi -L 2>&1 || true)"
+  case "$out" in
+    *GPU*) log "gpu: $(printf '%s\n' "$out" | head -1 | cut -c1-80)" ;;
+    *) log "WARNING: nvidia-smi failed: $(printf '%s' "$out" | head -1 | cut -c1-100) (ホストのドライバとコンテナの libcuda1 の版を揃える: provision/run)"; return ;;
+  esac
+  python3 - <<'PY' | sed 's/^/[provision] gpu: /'
+import ctypes, sys
+try:
+    cuda = ctypes.CDLL("libcuda.so.1")
+    r = cuda.cuInit(0)
+    n = ctypes.c_int(0)
+    cuda.cuDeviceGetCount(ctypes.byref(n))
+    print(f"cuInit={r} devices={n.value}" + ("" if r == 0 else "  (WARNING: CUDA初期化に失敗)"))
+except OSError as e:
+    print(f"WARNING: libcuda を読み込めません: {e}")
+PY
+}
+
 # スマホ用のQRコードを、Macに何も入れずに描画するため
 install_qrencode() {
   command -v qrencode >/dev/null 2>&1 || { sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq qrencode >/dev/null 2>&1; log "qrencode: installed"; }
@@ -219,6 +257,7 @@ UNIT
 
 install_sftp
 install_qrencode
+install_gpu
 install_node
 install_jj
 configure_vcs
