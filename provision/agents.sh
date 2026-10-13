@@ -82,6 +82,9 @@ install_instruction_files() {
   mkdir -p "$HOME/.claude" "$HOME/.codex"
   [ -e "$HOME/.claude/CLAUDE.md" ] || { cp "$DIR/files/CLAUDE.md" "$HOME/.claude/CLAUDE.md"; log "~/.claude/CLAUDE.md created"; }
   [ -e "$HOME/.codex/AGENTS.md" ] || { cp "$DIR/files/AGENTS.md" "$HOME/.codex/AGENTS.md"; log "~/.codex/AGENTS.md created"; }
+  # DeepSeek Harnessは、全セッションの最初のリクエストに ~/.dsh/AGENTS.md を読み込む
+  mkdir -p "$HOME/.dsh"
+  [ -e "$HOME/.dsh/AGENTS.md" ] || { cp "$DIR/files/DSH_AGENTS.md" "$HOME/.dsh/AGENTS.md"; log "~/.dsh/AGENTS.md created"; }
 }
 
 REBUILT=0
@@ -97,6 +100,13 @@ install_dsh() {
   if [ "$(cat "$stamp" 2>/dev/null || true)" != "$DSH_COMMIT" ]; then
     sudo corepack enable
     corepack prepare "$(node -p 'require("./package.json").packageManager')" --activate >/dev/null
+    # ビルドは約6GiB以上のメモリを使う。足りないとOOMでKillされる (終了コード137)
+    local mem_gib; mem_gib="$(awk '/^MemTotal:/ {printf "%d", $2/1048576}' /proc/meminfo)"
+    if [ "$mem_gib" -lt 7 ]; then
+      echo "[provision] ERROR: ${mem_gib}GiB of memory is not enough to build DeepSeek Harness (need >= 8GiB)." >&2
+      echo "[provision]        Raise memory for this instance in terraform.tfvars (e.g. 8GiB), run tofu apply, then retry." >&2
+      exit 1
+    fi
     log "building DeepSeek Harness ${DSH_COMMIT:0:7} (several minutes)..."
     pnpm install --frozen-lockfile >/dev/null
     pnpm run build >/dev/null
