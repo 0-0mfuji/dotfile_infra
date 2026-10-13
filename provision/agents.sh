@@ -91,6 +91,25 @@ install_sandbox() {
   fi
 }
 
+# Zedから使うACP: DeepSeek Harness用のラッパー(Web設定と同期)と、Claude Code / Codex のACPアダプタ
+install_acp_tools() {
+  local pkg
+  for pkg in @agentclientprotocol/claude-agent-acp @zed-industries/codex-acp; do
+    if npm ls -g --depth=0 "$pkg" >/dev/null 2>&1; then log "$pkg: ok"; else
+      sudo npm install -g "$pkg" >/dev/null 2>&1; log "$pkg: installed"
+    fi
+  done
+  sudo install -m 755 "$DIR/files/dsh-acp" /usr/local/bin/dsh-acp
+  log "dsh-acp: installed"
+}
+
+# ACPプロファイルを(起動せずに)初期化しておく。dsh-acp が設定を書き込めるようにするため
+init_acp_profile() {
+  [ -d "$HOME/.dsh/profiles/acp" ] && return
+  ( cd "$HOME/src/deepseek-harness" && pnpm -s dsh --profile acp --dump-config >/dev/null 2>&1 ) || true
+  log "acp profile: initialized"
+}
+
 install_instruction_files() {
   mkdir -p "$HOME/.claude" "$HOME/.codex"
   [ -e "$HOME/.claude/CLAUDE.md" ] || { cp "$DIR/files/CLAUDE.md" "$HOME/.claude/CLAUDE.md"; log "~/.claude/CLAUDE.md created"; }
@@ -201,6 +220,8 @@ install_sandbox
 install_instruction_files
 install_dsh
 install_plugins
+init_acp_profile
+install_acp_tools
 install_service
 
 log "done. node=$(node -v) jj=$(jj --version | awk '{print $2}') claude=$(claude --version 2>/dev/null | head -1) codex=$(codex --version 2>/dev/null | head -1)"

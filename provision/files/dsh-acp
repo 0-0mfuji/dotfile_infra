@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# DeepSeek HarnessのACPサーバー。Zedなどのエディタから、起動のたびに呼ばれる。
+# 起動前に、WebプロファイルのLLM設定 (プロバイダ・モデル・既定モデル) を ACPプロファイルへコピーする。
+# Web UIで変えた設定が、次のスレッドから Zed側に反映される (APIキーは全プロファイル共通の ~/.dsh/.credentials.yaml)。
+# stdout はACPのプロトコル専用なので、何も出力しない。
+set -euo pipefail
+
+web="${DSH_ACP_WEB_PATCH:-$HOME/.dsh/profiles/web/cordis.patch.yml}"
+acp="${DSH_ACP_PATCH:-$HOME/.dsh/profiles/acp/cordis.patch.yml}"
+
+if [ -f "$web" ] && [ -d "$(dirname "$acp")" ]; then
+  tmp="$(mktemp)"
+  awk '
+    /^- id:/ { blk = $3; keep = (blk == "llm-pi-ai" || blk == "agent-default-model") }
+    keep { print }
+    blk == "agent-default-model" && $1 == "provider:" { prov = $2 }
+    blk == "agent-default-model" && $1 == "model:"    { model = $2 }
+    END {
+      if (prov != "" && model != "") {
+        print "- id: acp"
+        print "  name: \"@deepseek-ai/dsh-acp\""
+        print "  config:"
+        print "    provider: " prov
+        print "    model: " model
+      }
+    }
+  ' "$web" > "$tmp"
+  { echo "# dsh-acp が、起動のたびに Webプロファイルから生成する。手で編集しない。"; cat "$tmp"; } > "$tmp.out"
+  mv "$tmp.out" "$acp"; rm -f "$tmp"
+fi
+
+exec pnpm --dir "$HOME/src/deepseek-harness" -s dsh --profile acp
