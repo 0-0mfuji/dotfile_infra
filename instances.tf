@@ -1,5 +1,5 @@
 locals {
-  base_packages = ["openssh-server", "git", "curl", "ca-certificates", "build-essential"]
+  base_packages = ["openssh-server", "git", "curl", "ca-certificates", "build-essential", "bubblewrap"]
 }
 
 resource "incus_instance" "dev" {
@@ -17,6 +17,7 @@ resource "incus_instance" "dev" {
   config = {
     "limits.cpu"            = tostring(each.value.cpu)
     "limits.memory"         = each.value.memory
+    "security.nesting"      = tostring(each.value.nesting)
     "cloud-init.user-data"  = templatefile("${path.module}/cloud-init/dev-base.yaml.tftpl", {
       ssh_public_key = var.ssh_public_key
       packages       = concat(local.base_packages, each.value.packages)

@@ -68,6 +68,16 @@ install_agent_clis() {
 }
 
 # 利用者のファイルは上書きしない
+# Codexのサンドボックスは bubblewrap を使う。コンテナで動くには security.nesting=true が要る (dotfile_infra の nesting)
+install_sandbox() {
+  command -v bwrap >/dev/null 2>&1 || { sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq bubblewrap >/dev/null 2>&1; log "bubblewrap: installed"; }
+  if bwrap --ro-bind / / --dev /dev --proc /proc --unshare-user --unshare-pid --unshare-net -- true 2>/dev/null; then
+    log "sandbox (bwrap): ok"
+  else
+    log "WARNING: bwrap sandbox cannot start; Codex delegation will fail. Set nesting = true for this instance in terraform.tfvars, apply, and restart it."
+  fi
+}
+
 install_instruction_files() {
   mkdir -p "$HOME/.claude" "$HOME/.codex"
   [ -e "$HOME/.claude/CLAUDE.md" ] || { cp "$DIR/files/CLAUDE.md" "$HOME/.claude/CLAUDE.md"; log "~/.claude/CLAUDE.md created"; }
@@ -146,6 +156,7 @@ install_node
 install_jj
 configure_vcs
 install_agent_clis
+install_sandbox
 install_instruction_files
 install_dsh
 install_plugins

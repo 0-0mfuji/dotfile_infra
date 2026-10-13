@@ -31,6 +31,7 @@ variable "dev_instances" {
     memory    = optional(string, "4GiB")
     disk_size = optional(string, "50GiB")
     gpu       = optional(bool, false)
+    nesting   = optional(bool, true) # Codexのサンドボックス(bubblewrap)に必要。コンテナ内でprocを再マウントできるようにする
     packages  = optional(list(string), []) # 基本パッケージに加えてこのInstanceに入れるaptパッケージ
     ip        = optional(string) # Development Network内の固定IPv4 (例: "10.10.0.11")
   }))
