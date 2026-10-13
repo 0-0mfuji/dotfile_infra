@@ -28,6 +28,7 @@ MacBook --(ssh)--> Development Server --(このリポジトリをclone)--> tofu 
 ## 構成
 
 ```
+provision/                コンテナの中身の構築 (Node.js, git/jj, Claude Code/Codex, DeepSeek Harness)
 host/                     Debianホストの構築 (SSH/WoL/Tailscale/ZFS/Incus導入、ディスク初期化)
 install.sh                Development ServerへOpenTofu CLIをインストールする
 versions.tf              provider バージョン制約 ("terraform"ブロックのまま。OpenTofu互換)

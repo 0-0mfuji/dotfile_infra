@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# サーバー上で実行する。指定したコンテナ (省略時は稼働中の全 *-dev) にプロビジョニングを流す。
+# Usage: provision/run [instance ...]
+set -euo pipefail
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+instances=("$@")
+if [ "${#instances[@]}" -eq 0 ]; then
+  while IFS= read -r n; do [ -n "$n" ] && instances+=("$n"); done < <(incus list status=running -c n -f csv | grep -- '-dev$' || true)
+fi
+[ "${#instances[@]}" -gt 0 ] || { echo "no running *-dev instances" >&2; exit 1; }
+
+for i in "${instances[@]}"; do
+  echo "==> $i"
+  incus exec "$i" -- rm -rf /tmp/provision
+  incus file push -r "$DIR" "$i/tmp/"
+  incus exec "$i" --user 1000 --group 1000 --cwd /home/dev --env HOME=/home/dev --env USER=dev -- bash /tmp/provision/agents.sh
+done
