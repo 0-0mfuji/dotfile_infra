@@ -109,13 +109,21 @@ install_qrencode() {
   command -v qrencode >/dev/null 2>&1 || { sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq qrencode >/dev/null 2>&1; log "qrencode: installed"; }
 }
 
+# グローバルnpmパッケージを入れる。UPDATE=1 (provision/run --update) のときは、入っていても最新にする
+npm_global() {
+  local pkg="$1" old new
+  old="$(npm ls -g --depth=0 --json "$pkg" 2>/dev/null | python3 -c 'import sys,json; print(json.load(sys.stdin).get("dependencies",{}).popitem()[1]["version"])' 2>/dev/null || true)"
+  if [ -n "$old" ] && [ "${UPDATE:-}" != 1 ]; then log "$pkg: ok ($old)"; return; fi
+  sudo npm install -g "$pkg@latest" >/dev/null 2>&1 || { log "$pkg: install FAILED"; return; }
+  new="$(npm ls -g --depth=0 --json "$pkg" 2>/dev/null | python3 -c 'import sys,json; print(json.load(sys.stdin)["dependencies"].popitem()[1]["version"])' 2>/dev/null || true)"
+  if [ -z "$old" ]; then log "$pkg: installed ($new)"
+  elif [ "$old" = "$new" ]; then log "$pkg: up to date ($new)"
+  else log "$pkg: updated $old -> $new"; fi
+}
+
 install_agent_clis() {
-  local pkg
-  for pkg in @anthropic-ai/claude-code @openai/codex; do
-    if npm ls -g --depth=0 "$pkg" >/dev/null 2>&1; then log "$pkg: ok"; else
-      sudo npm install -g "$pkg" >/dev/null 2>&1; log "$pkg: installed"
-    fi
-  done
+  npm_global @anthropic-ai/claude-code
+  npm_global @openai/codex
 }
 
 # 利用者のファイルは上書きしない
@@ -131,16 +139,12 @@ install_sandbox() {
 
 # Zedから使うACP: DeepSeek Harness用のラッパー(Web設定と同期)と、Claude Code / Codex のACPアダプタ
 install_acp_tools() {
-  local pkg
   # 旧版 (@zed-industries/codex-acp) は開発終了で、モデル一覧が古い。同名コマンドを持つので、先に外す
   if npm ls -g --depth=0 @zed-industries/codex-acp >/dev/null 2>&1; then
     sudo npm uninstall -g @zed-industries/codex-acp >/dev/null 2>&1; log "@zed-industries/codex-acp: removed (replaced)"
   fi
-  for pkg in @agentclientprotocol/claude-agent-acp @agentclientprotocol/codex-acp; do
-    if npm ls -g --depth=0 "$pkg" >/dev/null 2>&1; then log "$pkg: ok"; else
-      sudo npm install -g "$pkg" >/dev/null 2>&1; log "$pkg: installed"
-    fi
-  done
+  npm_global @agentclientprotocol/claude-agent-acp
+  npm_global @agentclientprotocol/codex-acp
   sudo install -m 755 "$DIR/files/dsh-acp" /usr/local/bin/dsh-acp
   log "dsh-acp: installed"
 }

@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 # サーバー上で実行する。指定したコンテナ (省略時は稼働中の全 *-dev) にプロビジョニングを流す。
-# Usage: provision/run [instance ...]
+# Usage: provision/run [--update] [instance ...]
+#   --update  Claude Code / Codex / claude-agent-acp / codex-acp を最新版にする (付けなければ、入っている版のまま)
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+update=0
+if [ "${1:-}" = "--update" ]; then update=1; shift; fi
 instances=("$@")
 if [ "${#instances[@]}" -eq 0 ]; then
   while IFS= read -r n; do [ -n "$n" ] && instances+=("$n"); done < <(incus list status=running -c n -f csv | grep -- '-dev$' || true)
@@ -27,5 +30,5 @@ for i in "${instances[@]}"; do
   mp="$(mobile_port "$i")"
   incus exec "$i" -- rm -rf /tmp/provision
   incus file push -r "$DIR" "$i/tmp/"
-  incus exec "$i" --user 1000 --group 1000 --cwd /home/dev --env HOME=/home/dev --env USER=dev --env "MOBILE_HOST=${MOBILE_HOST:-}" --env "MOBILE_PORT=${mp:-}" --env "GIT_USER_NAME=${GIT_USER_NAME:-}" --env "GIT_USER_EMAIL=${GIT_USER_EMAIL:-}" -- bash /tmp/provision/agents.sh
+  incus exec "$i" --user 1000 --group 1000 --cwd /home/dev --env HOME=/home/dev --env USER=dev --env "MOBILE_HOST=${MOBILE_HOST:-}" --env "MOBILE_PORT=${mp:-}" --env "GIT_USER_NAME=${GIT_USER_NAME:-}" --env "GIT_USER_EMAIL=${GIT_USER_EMAIL:-}" --env "UPDATE=$update" -- bash /tmp/provision/agents.sh
 done
