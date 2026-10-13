@@ -18,8 +18,13 @@ dev_instances = {
     memory    = "8GiB"
     disk_size = "100GiB"
   }
+  ml = {
+    cpu       = 8
+    memory    = "16GiB"
+    disk_size = "200GiB" # Kaggleのデータセット・モデル用。GPUは dev-base 経由で全コンテナに渡る
+  }
   os = {
-    packages  = ["qemu-system-x86", "nasm", "gdb", "make"]
+    packages = ["qemu-system-x86", "nasm", "gdb", "make"]
     cpu       = 4
     memory    = "4GiB"
     disk_size = "50GiB"

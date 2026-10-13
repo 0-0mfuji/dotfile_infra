@@ -132,7 +132,11 @@ install_sandbox() {
 # Zedから使うACP: DeepSeek Harness用のラッパー(Web設定と同期)と、Claude Code / Codex のACPアダプタ
 install_acp_tools() {
   local pkg
-  for pkg in @agentclientprotocol/claude-agent-acp @zed-industries/codex-acp; do
+  # 旧版 (@zed-industries/codex-acp) は開発終了で、モデル一覧が古い。同名コマンドを持つので、先に外す
+  if npm ls -g --depth=0 @zed-industries/codex-acp >/dev/null 2>&1; then
+    sudo npm uninstall -g @zed-industries/codex-acp >/dev/null 2>&1; log "@zed-industries/codex-acp: removed (replaced)"
+  fi
+  for pkg in @agentclientprotocol/claude-agent-acp @agentclientprotocol/codex-acp; do
     if npm ls -g --depth=0 "$pkg" >/dev/null 2>&1; then log "$pkg: ok"; else
       sudo npm install -g "$pkg" >/dev/null 2>&1; log "$pkg: installed"
     fi
