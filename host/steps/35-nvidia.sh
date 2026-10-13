@@ -32,6 +32,9 @@ EOF2
 for u in nvidia-suspend.service nvidia-resume.service nvidia-hibernate.service; do
   systemctl list-unit-files "$u" >/dev/null 2>&1 && systemctl enable "$u" >/dev/null 2>&1 || true
 done
+# CUDAに要る /dev/nvidia-uvm は、nvidia_uvm モジュールが読まれて初めて作られる。再起動後に誰もCUDAを使っていないと無く、
+# その状態で起動したコンテナにはGPUのデバイスが半端にしか渡らない (cuInit=999)。起動時に必ず読み込んでおく
+echo nvidia-uvm > /etc/modules-load.d/nvidia-uvm-dev.conf
 # /dev/nvidia* を起動時に用意し、コンテナへ渡せるようにする
 systemctl enable nvidia-persistenced.service >/dev/null 2>&1 || true
 
