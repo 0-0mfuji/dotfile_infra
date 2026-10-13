@@ -1,5 +1,5 @@
 locals {
-  base_packages = ["openssh-server", "git", "curl", "ca-certificates", "build-essential", "bubblewrap"]
+  base_packages = ["openssh-server", "git", "curl", "ca-certificates", "build-essential", "bubblewrap", "qrencode"]
 }
 
 resource "incus_instance" "dev" {
@@ -32,6 +32,18 @@ resource "incus_instance" "dev" {
       properties = {
         network        = incus_network.dev.name
         "ipv4.address" = device.value
+      }
+    }
+  }
+
+  dynamic "device" {
+    for_each = (each.value.web_port == null || var.mobile_bind_ip == null) ? [] : [each.value.web_port]
+    content {
+      name = "web"
+      type = "proxy"
+      properties = {
+        listen  = "tcp:${var.mobile_bind_ip}:${device.value}"
+        connect = "tcp:127.0.0.1:3080"
       }
     }
   }

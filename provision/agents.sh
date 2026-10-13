@@ -58,6 +58,19 @@ configure_vcs() {
   fi
 }
 
+# Zedの拡張機能の転送 (SFTP/SCP) に必要。Debianのcloud imageのsshd_configにはSubsystemが無い
+install_sftp() {
+  if grep -q '^Subsystem' /etc/ssh/sshd_config; then log "sftp subsystem: ok"; return; fi
+  echo 'Subsystem sftp /usr/lib/openssh/sftp-server' | sudo tee -a /etc/ssh/sshd_config >/dev/null
+  sudo sshd -t && sudo systemctl reload ssh
+  log "sftp subsystem: enabled"
+}
+
+# スマホ用のQRコードを、Macに何も入れずに描画するため
+install_qrencode() {
+  command -v qrencode >/dev/null 2>&1 || { sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq qrencode >/dev/null 2>&1; log "qrencode: installed"; }
+}
+
 install_agent_clis() {
   local pkg
   for pkg in @anthropic-ai/claude-code @openai/codex; do
@@ -132,8 +145,20 @@ install_plugins() {
 # 一般ユーザーのsystemd --user はSSH経由だと環境が不安定なため、systemのunitにUser=で動かす。
 # URLのトークンは起動のたびに変わるので、ログを毎回作り直し (file: は起動時に切り詰める)、devコマンドが読む。
 install_service() {
-  local me d; me="$(id -un)"; d="$HOME/src/deepseek-harness"
-  sudo tee /etc/systemd/system/dsh-web.service >/dev/null <<UNIT
+  local me d args unit; me="$(id -un)"; d="$HOME/src/deepseek-harness"
+  args="--no-open"
+  if [ -n "${MOBILE_HOST:-}" ] && [ -n "${MOBILE_PORT:-}" ]; then
+    local pub="http://${MOBILE_HOST}:${MOBILE_PORT}"   # Tailnet内の通信はWireGuardで暗号化されている (HTTPS証明書は使わない)
+    # authorityの表記(ホストのみ / ホスト:ポート)のどちらで照合されても通るよう、両方を許可する
+    args="$args --trusted-host ${MOBILE_HOST}"
+    args="$args --trusted-host ${MOBILE_HOST}:${MOBILE_PORT}"
+    args="$args --public-url ${pub}/"
+    echo "${pub}/" > "$HOME/.dsh/mobile-url"
+  else
+    rm -f "$HOME/.dsh/mobile-url"
+  fi
+  unit="$(mktemp)"
+  cat > "$unit" <<UNIT
 [Unit]
 Description=DeepSeek Harness Web UI (127.0.0.1:3080)
 After=network.target
@@ -143,7 +168,7 @@ User=$me
 WorkingDirectory=$d
 Environment=HOME=$HOME
 Environment=PATH=/usr/local/bin:/usr/bin:/bin
-ExecStart=/usr/local/bin/pnpm dsh web --no-open
+ExecStart=/usr/local/bin/pnpm dsh web $args
 StandardOutput=file:$HOME/.dsh/web.log
 StandardError=inherit
 Restart=on-failure
@@ -152,6 +177,10 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
+  # unitの内容(起動引数)が変わったときも再起動する
+  if ! cmp -s "$unit" /etc/systemd/system/dsh-web.service 2>/dev/null; then REBUILT=1; fi
+  sudo install -m 644 "$unit" /etc/systemd/system/dsh-web.service
+  rm -f "$unit"
   sudo systemctl daemon-reload
   sudo systemctl enable dsh-web.service >/dev/null 2>&1
   if [ "$REBUILT" = 1 ] || ! systemctl is-active --quiet dsh-web.service; then
@@ -162,6 +191,8 @@ UNIT
   fi
 }
 
+install_sftp
+install_qrencode
 install_node
 install_jj
 configure_vcs

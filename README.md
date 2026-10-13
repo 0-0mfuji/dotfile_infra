@@ -57,6 +57,7 @@ dotfiles_server の `config/projects.conf` の instance列・SSHのHost名と
 | `type` | `container` | `container` または `virtual-machine` |
 | `cpu` / `memory` / `disk_size` | `4` / `4GiB` / `50GiB` | リソース上限 |
 | `gpu` | `false` | `true` でGPU passthrough profileを付与 |
+| `web_port` | なし | サーバーのTailscale IP (`mobile_bind_ip`) で待ち受ける、Web UIへの転送ポート (Incus proxy)。スマホ用。設定は [environments.md](https://github.com/0-0mfuji/dotfiles_server/blob/main/docs/environments.md#スマホ用の設定-tailnet) |
 | `nesting` | `true` | `security.nesting`。Codexのサンドボックス(bubblewrap)がコンテナ内で動くために必要。変更には再起動が要る |
 | `ip` | なし | Development Network内の固定IPv4 (例: `10.10.0.11`)。SSH設定と合わせる |
 | `packages` | `[]` | 基本パッケージ (`git` `curl` `build-essential` 等) に加えて入れるaptパッケージ |

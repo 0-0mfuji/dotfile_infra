@@ -16,3 +16,5 @@ ssh_pwauth: false
 # パスワード欄が"!"(ロック)だとsshdが公開鍵も拒否する。"*"ならパスワードログイン不可のまま鍵は通る
 runcmd:
   - [usermod, -p, "*", dev]
+  # Zedは拡張機能をSFTP/SCPで転送する。cloud imageのsshd_configにはSubsystemが無く、失敗する
+  - [sh, -c, "grep -q '^Subsystem' /etc/ssh/sshd_config || echo 'Subsystem sftp /usr/lib/openssh/sftp-server' >> /etc/ssh/sshd_config; systemctl reload ssh"]

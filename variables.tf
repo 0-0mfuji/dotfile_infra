@@ -19,6 +19,12 @@ variable "ssh_public_key" {
   type        = string
 }
 
+variable "mobile_bind_ip" {
+  description = "スマホ用: サーバーのTailscale IP (tailscale ip -4)。web_port を設定したコンテナが、このIPだけで待ち受ける (LANには出ない)"
+  type        = string
+  default     = null
+}
+
 variable "dev_instances" {
   description = <<-EOT
     作成する開発用Instanceの定義。keyがそのままInstance名の接頭辞になり、
@@ -33,6 +39,7 @@ variable "dev_instances" {
     gpu       = optional(bool, false)
     nesting   = optional(bool, true) # Codexのサンドボックス(bubblewrap)に必要。コンテナ内でprocを再マウントできるようにする
     packages  = optional(list(string), []) # 基本パッケージに加えてこのInstanceに入れるaptパッケージ
+    web_port  = optional(number) # サーバーのTailscale IPで待ち受ける、Web UI(コンテナの3080)への転送ポート。スマホ用
     ip        = optional(string) # Development Network内の固定IPv4 (例: "10.10.0.11")
   }))
 }

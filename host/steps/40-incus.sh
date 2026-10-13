@@ -9,3 +9,12 @@ adduser "$TARGET_USER" incus-admin
 
 echo "incus: $(incus --version)"
 echo "note: '$TARGET_USER' was added to incus-admin; log out and in again for it to take effect."
+
+# スマホ用のproxy deviceはサーバーのTailscale IPで待ち受けるため、IncusはTailscaleより後に起動する
+mkdir -p /etc/systemd/system/incus.service.d
+cat > /etc/systemd/system/incus.service.d/after-tailscale.conf <<'EOF2'
+[Unit]
+After=tailscaled.service
+Wants=tailscaled.service
+EOF2
+systemctl daemon-reload
