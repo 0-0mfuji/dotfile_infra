@@ -35,6 +35,23 @@ done
 # CUDAに要る /dev/nvidia-uvm は、nvidia_uvm モジュールが読まれて初めて作られる。再起動後に誰もCUDAを使っていないと無く、
 # その状態で起動したコンテナにはGPUのデバイスが半端にしか渡らない (cuInit=999)。起動時に必ず読み込んでおく
 echo nvidia-uvm > /etc/modules-load.d/nvidia-uvm-dev.conf
+# モジュールを読むだけではデバイスファイルは作られない。nvidia-modprobe で作る。コンテナ (incus) より先に済ませる
+cat > /etc/systemd/system/nvidia-uvm-dev.service <<'EOF2'
+[Unit]
+Description=Create /dev/nvidia-uvm for CUDA before containers start
+After=systemd-modules-load.service nvidia-persistenced.service
+Before=incus.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/nvidia-modprobe -u -c=0
+
+[Install]
+WantedBy=multi-user.target
+EOF2
+systemctl daemon-reload
+systemctl enable --now nvidia-uvm-dev.service
 # /dev/nvidia* を起動時に用意し、コンテナへ渡せるようにする
 systemctl enable nvidia-persistenced.service >/dev/null 2>&1 || true
 
