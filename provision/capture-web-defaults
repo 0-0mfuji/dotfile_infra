@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""os-dev のWeb設定から、プロバイダ・モデル一覧などを、web-defaults.yml へ取り込み直す (サーバー上で実行)。
+既定モデル (agent-default-model) は、テンプレート側で管理しているので、取り込まない。
+取り込んだあと、差分を確認して、コミットする。
+
+Usage: provision/capture-web-defaults [instance]     (既定: os-dev)
+"""
+import os
+import re
+import subprocess
+import sys
+
+DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATE = os.path.join(DIR, "files", "web-defaults.yml")
+SKIP = {"agent-default-model"}
+
+
+def split_blocks(text):
+    header, blocks, cur_id, cur = [], [], None, []
+    for line in text.splitlines():
+        m = re.match(r"^- id:\s*(\S+)", line)
+        if m:
+            if cur_id is not None:
+                blocks.append((cur_id, "\n".join(cur).rstrip()))
+            cur_id, cur = m.group(1).strip("\"'"), [line]
+        elif cur_id is None:
+            header.append(line)
+        else:
+            cur.append(line)
+    if cur_id is not None:
+        blocks.append((cur_id, "\n".join(cur).rstrip()))
+    return header, blocks
+
+
+def main():
+    inst = sys.argv[1] if len(sys.argv) > 1 else "os-dev"
+    src = subprocess.run(["incus", "exec", inst, "--", "cat", "/home/dev/.dsh/profiles/web/cordis.patch.yml"],
+                         check=True, capture_output=True, text=True).stdout
+    _, fresh = split_blocks(src)
+    fresh = {i: b for i, b in fresh if i not in SKIP}
+    header, mine = split_blocks(open(TEMPLATE).read())
+    out = list(header)
+    seen = set()
+    for i, b in mine:
+        out.append(fresh.get(i, b)); seen.add(i)
+    out += [b for i, b in fresh.items() if i not in seen]
+    open(TEMPLATE, "w").write("\n".join(out) + "\n")
+    print(f"updated {TEMPLATE} from {inst}: " + ", ".join(sorted(fresh)))
+
+
+main()

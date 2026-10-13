@@ -103,6 +103,13 @@ install_acp_tools() {
   log "dsh-acp: installed"
 }
 
+# DeepSeek Harness (Web UI) の既定設定 (Ollama Cloudのモデル一覧・既定モデルなど。APIキーは含まない) を、
+# コンテナのWeb設定に「無い項目だけ」足す。既にある項目は上書きしない。Webプロファイルはライブで反映する。
+seed_web_settings() {
+  python3 "$DIR/files/seed-web-settings" "$DIR/files/web-defaults.yml" "$HOME/.dsh/profiles/web/cordis.patch.yml" \
+    | sed 's/^/[provision] /'
+}
+
 # ACPプロファイルを(起動せずに)初期化しておく。dsh-acp が設定を書き込めるようにするため
 init_acp_profile() {
   [ -d "$HOME/.dsh/profiles/acp" ] && return
@@ -220,6 +227,7 @@ install_sandbox
 install_instruction_files
 install_dsh
 install_plugins
+seed_web_settings
 init_acp_profile
 install_acp_tools
 install_service

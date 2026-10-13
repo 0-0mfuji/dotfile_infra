@@ -25,7 +25,8 @@ if [ -f "$web" ] && [ -d "$(dirname "$acp")" ]; then
       }
     }
   ' "$web" > "$tmp"
-  { echo "# dsh-acp が、起動のたびに Webプロファイルから生成する。手で編集しない。"; cat "$tmp"; } > "$tmp.out"
+  # 抽出した行が無い (Web側のLLM設定が空の新しいコンテナ) ときも、パッチは「YAMLの配列」でなければならない
+  { echo "# dsh-acp が、起動のたびに Webプロファイルから生成する。手で編集しない。"; if [ -s "$tmp" ]; then cat "$tmp"; else echo "[]"; fi; } > "$tmp.out"
   mv "$tmp.out" "$acp"; rm -f "$tmp"
 fi
 

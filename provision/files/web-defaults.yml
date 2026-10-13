@@ -1,0 +1,34 @@
+# DeepSeek Harness (Web UI) の既定設定。新しいコンテナへ、足りない項目だけを反映する (provision/files/seed-web-settings)。
+# 秘密は含めない: APIキー本体は、各コンテナの認証情報 (~/.dsh/.credentials.yaml) に、Web UIから入力する。
+# プロバイダとモデル一覧は os-dev から取り込む (provision/capture-web-defaults)。既定モデルは、ここで管理する。
+- id: ui-settings-general
+  name: "@deepseek-ai/dsh-client-ui-settings-general"
+  config:
+    welcomeNoticeVersion: 2026-09-28.1
+- id: llm-pi-ai
+  name: "@deepseek-ai/dsh-llm-pi-ai"
+  config:
+    providers:
+      ollama-cloud:
+        models:
+          - id: deepSeek-v4.1-flash
+            name: Deep Seek V4.1 Flash
+            contextWindow: 1000000
+            maxTokens: 384000
+            input:
+              - text
+              - image
+          - id: gemma4:31b
+            name: Gemma 4 31GB
+            contextWindow: 256000
+            maxTokens: 16000
+          - id: gpt-oss:120b
+            name: GPT OSS 120GB
+            contextWindow: 128000
+            maxTokens: 33000
+        apiKeyEnv: OLLAMA_CLOUD_API_KEY
+- id: agent-default-model
+  name: "@deepseek-ai/dsh-agent-default-model"
+  config:
+    provider: ollama-cloud
+    model: deepSeek-v4.1-flash

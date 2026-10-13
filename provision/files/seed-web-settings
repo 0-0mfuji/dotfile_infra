@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""web-defaults.yml の項目のうち、コンテナのWeb設定に「無い項目 (id)」だけを足す。
+既にある項目は上書きしない (コンテナごとに変えた設定を守る)。何度実行しても同じ結果になる。
+Webプロファイルは設定の変更をライブで反映するので、再起動は要らない。
+
+Usage: seed-web-settings <template.yml> <profile-cordis.patch.yml>
+"""
+import re
+import sys
+
+
+def split_blocks(text):
+    """(先頭のコメント行, [(id, ブロック全文)]) に分ける。ブロックは '- id:' で始まるトップレベルの項目。"""
+    header, blocks, cur_id, cur = [], [], None, []
+    for line in text.splitlines():
+        m = re.match(r"^- id:\s*(\S+)", line)
+        if m:
+            if cur_id is not None:
+                blocks.append((cur_id, "\n".join(cur).rstrip()))
+            cur_id, cur = m.group(1).strip("\"'"), [line]
+        elif cur_id is None:
+            if line.strip() not in ("", "[]"):
+                header.append(line)
+        else:
+            cur.append(line)
+    if cur_id is not None:
+        blocks.append((cur_id, "\n".join(cur).rstrip()))
+    return header, blocks
+
+
+def main():
+    template, target = sys.argv[1], sys.argv[2]
+    _, want = split_blocks(open(template).read())
+    try:
+        existing = open(target).read()
+    except FileNotFoundError:
+        existing = ""
+    header, have = split_blocks(existing)
+    have_ids = {i for i, _ in have}
+    missing = [(i, b) for i, b in want if i not in have_ids]
+    if not missing:
+        print("seed-web-settings: 追加する項目はありません")
+        return
+    out = list(header) or ["# Your patch layer for this dsh profile, applied after every bundle layer."]
+    out += [b for _, b in have] + [b for _, b in missing]
+    open(target, "w").write("\n".join(out) + "\n")
+    print("seed-web-settings: 追加 " + ", ".join(i for i, _ in missing))
+
+
+main()
