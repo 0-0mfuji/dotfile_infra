@@ -30,5 +30,5 @@ for i in "${instances[@]}"; do
   mp="$(mobile_port "$i")"
   incus exec "$i" -- rm -rf /tmp/provision
   incus file push -r "$DIR" "$i/tmp/"
-  incus exec "$i" --user 1000 --group 1000 --cwd /home/dev --env HOME=/home/dev --env USER=dev --env "MOBILE_HOST=${MOBILE_HOST:-}" --env "MOBILE_PORT=${mp:-}" --env "GIT_USER_NAME=${GIT_USER_NAME:-}" --env "GIT_USER_EMAIL=${GIT_USER_EMAIL:-}" --env "UPDATE=$update" -- bash /tmp/provision/agents.sh
+  incus exec "$i" --user 1000 --group 1000 --cwd /home/dev --env HOME=/home/dev --env USER=dev --env "MOBILE_HOST=${MOBILE_HOST:-}" --env "MOBILE_PORT=${mp:-}" --env "GIT_USER_NAME=${GIT_USER_NAME:-}" --env "GIT_USER_EMAIL=${GIT_USER_EMAIL:-}" --env "UPDATE=$update" --env "INSTANCE=$i" -- bash /tmp/provision/agents.sh
 done

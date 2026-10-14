@@ -263,6 +263,68 @@ UNIT
   fi
 }
 
+# lang-dev 専用: 言語処理系 (OCaml) の開発環境。opam で入れる
+#   コンパイラ: OCAML_VERSION (versions.env) / dune, ocaml-lsp-server (Zed), ocamlformat, utop, alcotest, odoc, ppx_deriving
+OCAML_PKGS=(dune ocaml-lsp-server ocamlformat utop alcotest odoc ppx_deriving)
+
+install_ocaml() {
+  if ! command -v opam >/dev/null 2>&1; then
+    sudo apt-get update -qq >/dev/null 2>&1
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq opam build-essential m4 unzip pkg-config rsync >/dev/null 2>&1 \
+      || { log "ocaml: apt install FAILED"; return; }
+    log "opam + build tools: installed"
+  fi
+  # コンテナ自体が隔離されているので、opam自前のサンドボックス(bwrap)は使わない
+  [ -d "$HOME/.opam" ] || opam init --bare --auto-setup --disable-sandboxing -y >/dev/null 2>&1 \
+    || { log "opam init FAILED"; return; }
+  if ! opam switch list --short 2>/dev/null | grep -qx default; then
+    log "building OCaml $OCAML_VERSION (several minutes)..."
+    opam switch create default "$OCAML_VERSION" -y >/dev/null 2>&1 || { log "ocaml $OCAML_VERSION: switch create FAILED"; return; }
+  fi
+  if [ "${UPDATE:-}" = 1 ]; then opam update -y >/dev/null 2>&1 || true; fi
+  local missing=() p
+  for p in "${OCAML_PKGS[@]}"; do opam list --installed --short --switch=default "$p" 2>/dev/null | grep -qx "$p" || missing+=("$p"); done
+  if [ "${UPDATE:-}" = 1 ]; then
+    opam upgrade -y --switch=default >/dev/null 2>&1 || log "opam upgrade FAILED"
+  fi
+  if [ "${#missing[@]}" -gt 0 ]; then
+    log "opam install: ${missing[*]} (several minutes)..."
+    opam install -y --switch=default "${missing[@]}" >/dev/null 2>&1 || { log "opam install FAILED (opam install ${missing[*]} で原因を確認)"; return; }
+  fi
+  # ssh経由の非対話シェル (Zed / Claude Code / Codex) でも dune などを使えるよう、PATH等を設定する。
+  # ~/.bashrc は先頭が「非対話なら終了」なので、その前 (先頭) に入れる
+  local marker="# >>> opam (provision) >>>" f
+  for f in "$HOME/.profile" "$HOME/.bashrc"; do
+    touch "$f"
+    grep -qF "$marker" "$f" && continue
+    { printf '%s\n[ -r "$HOME/.opam/opam-init/init.sh" ] && eval "$(opam env --switch=default --set-switch 2>/dev/null)"\n# <<< opam (provision) <<<\n' "$marker"; cat "$f"; } > "$f.new" && mv "$f.new" "$f"
+  done
+  log "ocaml $(opam exec --switch=default -- ocaml -vnum): ok (dune $(opam exec --switch=default -- dune --version))"
+}
+
+# lang-dev 専用: ドキュメント (言語仕様・設計メモ) 用の mdBook。公式のビルド済みバイナリをチェックサム検証して入れる
+install_mdbook() {
+  if command -v mdbook >/dev/null 2>&1 && [ "$(mdbook --version | awk '{print $2}')" = "v$MDBOOK_VERSION" ]; then
+    log "mdbook v$MDBOOK_VERSION: ok"; return
+  fi
+  local f="mdbook-v${MDBOOK_VERSION}-x86_64-unknown-linux-musl.tar.gz" tmp
+  tmp="$(mktemp -d)"
+  curl -fsSL "https://github.com/rust-lang/mdBook/releases/download/v${MDBOOK_VERSION}/$f" -o "$tmp/$f"
+  echo "$MDBOOK_SHA256  $tmp/$f" | sha256sum -c -
+  tar -xzf "$tmp/$f" -C "$tmp" mdbook
+  sudo install -m 755 "$tmp/mdbook" /usr/local/bin/mdbook
+  rm -rf "$tmp"
+  log "mdbook $(mdbook --version | awk '{print $2}'): installed"
+}
+
+# インスタンス固有のツールチェーン。INSTANCE は provision/run が渡す
+install_toolchains() {
+  case "${INSTANCE:-}" in
+    lang-dev) install_ocaml; install_mdbook ;;
+    *) log "toolchain: none for '${INSTANCE:-?}'" ;;
+  esac
+}
+
 install_sftp
 install_qrencode
 install_gpu
@@ -277,6 +339,7 @@ install_plugins
 seed_web_settings
 init_acp_profile
 install_acp_tools
+install_toolchains
 install_service
 
 log "done. node=$(node -v) jj=$(jj --version | awk '{print $2}') claude=$(claude --version 2>/dev/null | head -1) codex=$(codex --version 2>/dev/null | head -1)"
