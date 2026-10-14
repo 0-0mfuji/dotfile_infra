@@ -317,10 +317,41 @@ install_mdbook() {
   log "mdbook $(mdbook --version | awk '{print $2}'): installed"
 }
 
+# lang-dev 専用: Rust (比較・参照用に、Rustのborrow checkerの挙動を試す)。rustup-init は公式のチェックサムで検証する
+#   ツールチェーン: RUST_VERSION (versions.env) / clippy, rustfmt, rust-analyzer, rust-src
+install_rust() {
+  export PATH="$HOME/.cargo/bin:$PATH"
+  if ! command -v rustup >/dev/null 2>&1; then
+    command -v cc >/dev/null 2>&1 || { sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq build-essential >/dev/null 2>&1 || { log "rust: build-essential FAILED"; return; }; }
+    local base="https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu" tmp
+    tmp="$(mktemp -d)"
+    curl -fsSL "$base/rustup-init" -o "$tmp/rustup-init"
+    curl -fsSL "$base/rustup-init.sha256" -o "$tmp/rustup-init.sha256"
+    (cd "$tmp" && sha256sum -c rustup-init.sha256 >/dev/null) || { log "rustup-init: checksum FAILED"; rm -rf "$tmp"; return; }
+    chmod +x "$tmp/rustup-init"
+    "$tmp/rustup-init" -y --no-modify-path --profile default --default-toolchain "$RUST_VERSION" -c rust-analyzer -c rust-src >/dev/null 2>&1 \
+      || { log "rustup-init FAILED"; rm -rf "$tmp"; return; }
+    rm -rf "$tmp"
+    log "rustup: installed"
+  fi
+  if ! rustup toolchain list | grep -q "^${RUST_VERSION}-"; then
+    rustup toolchain install "$RUST_VERSION" --profile default -c rust-analyzer -c rust-src >/dev/null 2>&1 || { log "rust $RUST_VERSION: install FAILED"; return; }
+  fi
+  rustup default "$RUST_VERSION" >/dev/null 2>&1
+  # ssh経由の非対話シェルでも cargo などを使えるよう、~/.profile と ~/.bashrc の先頭でPATHを通す (opamと同じ理由)
+  local marker="# >>> cargo (provision) >>>" f
+  for f in "$HOME/.profile" "$HOME/.bashrc"; do
+    touch "$f"
+    grep -qF "$marker" "$f" && continue
+    { printf '%s\n[ -r "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"\n# <<< cargo (provision) <<<\n' "$marker"; cat "$f"; } > "$f.new" && mv "$f.new" "$f"
+  done
+  log "rust $(rustc --version | awk '{print $2}'): ok (cargo $(cargo --version | awk '{print $2}'))"
+}
+
 # インスタンス固有のツールチェーン。INSTANCE は provision/run が渡す
 install_toolchains() {
   case "${INSTANCE:-}" in
-    lang-dev) install_ocaml; install_mdbook ;;
+    lang-dev) install_ocaml; install_rust; install_mdbook ;;
     *) log "toolchain: none for '${INSTANCE:-?}'" ;;
   esac
 }
