@@ -398,7 +398,9 @@ install_video() {
       log "video: WARNING: h264_nvenc が使えない (CPUの libx264 は使える)。docs/gpu.md の「NVENC」を参照"
     fi
   fi
-  # 共有ボリューム (tofu の media = "rw") があれば、受け渡し用のフォルダを作る
+  # 共有ボリューム (tofu の media = "rw") があれば、受け渡し用のフォルダを作る。
+  #   ホストの /srv/media は root 所有で、コンテナからも root に見える (idmapped)。dev が書けるよう、コンテナ内のsudoで所有者を直す
+  [ -d /srv/media ] && [ ! -w /srv/media ] && sudo chown dev:dev /srv/media
   [ -d /srv/media ] && [ -w /srv/media ] && mkdir -p /srv/media/audio /srv/media/renders /srv/media/out && log "video: /srv/media/{audio,renders,out}: ok"
   # voice-dev の VOICEVOX の場所。ssh経由の非対話シェル (Zed / Claude Code / Remotion) でも読めるよう、~/.profile と ~/.bashrc の先頭に入れる
   if [ -n "${VOICE_URL:-}" ]; then

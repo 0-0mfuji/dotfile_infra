@@ -6,7 +6,7 @@ export const Hello: React.FC<{text: string}> = ({text}) => {
   const frame = useCurrentFrame();
   const opacity = interpolate(frame, [0, 20], [0, 1], {extrapolateRight: 'clamp'});
   return (
-    <AbsoluteFill style={{backgroundColor: '#101820', justifyContent: 'center', alignItems: 'center'}}>
+    <AbsoluteFill style={{backgroundColor: '#101820', justifyContent: 'center', alignItems: 'center', padding: 160, textAlign: 'center'}}>
       <div style={{color: 'white', fontSize: 72, opacity, fontFamily: '"Noto Sans CJK JP", sans-serif'}}>{text}</div>
     </AbsoluteFill>
   );
