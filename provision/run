@@ -24,6 +24,7 @@ fi
 
 mobile_port() {  # $1=instance -> ポート (無ければ空)
   local e; for e in ${MOBILE_MAP:-}; do [ "${e%%:*}" = "$1" ] && { echo "${e#*:}"; return; }; done
+  return 0  # 無いコンテナ (web_port を付けない voice-dev など) で、set -e により止まらないように
 }
 
 for i in "${instances[@]}"; do
