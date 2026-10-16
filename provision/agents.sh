@@ -186,11 +186,11 @@ install_dsh() {
   if [ "$(cat "$stamp" 2>/dev/null || true)" != "$DSH_COMMIT" ]; then
     sudo corepack enable
     corepack prepare "$(node -p 'require("./package.json").packageManager')" --activate >/dev/null
-    # ビルドは約6GiB以上のメモリを使う。足りないとOOMでKillされる (終了コード137)
+    # ビルドは大量のメモリを使う。足りないとOOMでKillされる (SIGKILL / 終了コード137)。d3627f4 は、8GiBでも落ちた (16GiBで成功)
     local mem_gib; mem_gib="$(awk '/^MemTotal:/ {printf "%d", $2/1048576}' /proc/meminfo)"
-    if [ "$mem_gib" -lt 7 ]; then
-      echo "[provision] ERROR: ${mem_gib}GiB of memory is not enough to build DeepSeek Harness (need >= 8GiB)." >&2
-      echo "[provision]        Raise memory for this instance in terraform.tfvars (e.g. 8GiB), run tofu apply, then retry." >&2
+    if [ "$mem_gib" -lt 12 ]; then
+      echo "[provision] ERROR: ${mem_gib}GiB of memory is not enough to build DeepSeek Harness (need >= 12GiB, 16GiB recommended)." >&2
+      echo "[provision]        Raise memory for this instance in terraform.tfvars (e.g. 16GiB; it is a limit, not a reservation), run tofu apply, then retry." >&2
       exit 1
     fi
     log "building DeepSeek Harness ${DSH_COMMIT:0:7} (several minutes)..."

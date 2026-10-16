@@ -55,7 +55,7 @@ dev_instances = {
   }
   voice = {
     cpu       = 4
-    memory    = "8GiB"         # VOICEVOX自体は4GiBで足りるが、provision(DeepSeek Harnessの初回ビルド)が8GiB以上を要る
+    memory    = "16GiB"        # VOICEVOX自体は4GiBで足りるが、provision(DeepSeek Harnessの初回ビルド)が、d3627f4 以降は8GiBでOOMになる (上限であり、予約ではない)
     disk_size = "30GiB"        # VOICEVOX ENGINE (展開後 数GB)
     gpu       = false          # CPU版を使い、VRAM(8GB共有)を whisper / Blender に残す
     media     = "rw"
