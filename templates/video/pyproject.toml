@@ -1,0 +1,56 @@
+[project]
+name = "video-template"
+version = "0.0.0"
+description = "音声・字幕・画像処理 (Remotion の外側) の Python 環境"
+# mediapipe / numba (librosa) のホイールが揃う版に固定する。Debian 13 の既定 (3.13) は使わない
+requires-python = ">=3.12,<3.13"
+dependencies = []
+
+# 用途ごとに分ける。全部入りは `uv sync`、一部だけなら `uv sync --no-default-groups --group audio`
+[dependency-groups]
+audio = [
+  "numpy",
+  "scipy",
+  "librosa",
+  "soundfile",
+  "pydub",
+  "pyloudnorm",
+  "pedalboard",
+  "webrtcvad-wheels",
+  "faster-whisper",
+  "stable-ts",
+  "torch",  # stable-ts が使う。Linux は下の cu126 の索引 (ホストのドライバ550は CUDA 12.x まで。PyPIの既定は CUDA 13 で動かない)
+  "mido",
+  "pretty_midi",
+  "music21",
+  # faster-whisper (ctranslate2) がGPUで動くために要る。ホストのドライバ550はCUDA 12.x まで
+  "nvidia-cublas-cu12; sys_platform == 'linux'",
+  "nvidia-cudnn-cu12; sys_platform == 'linux'",
+]
+subs = ["pysubs2", "srt", "webvtt-py"]
+vision = [
+  "Pillow",
+  "opencv-python-headless",
+  "av",
+  "scenedetect",
+  "mediapipe",
+  "trimesh",
+  "pygltflib",
+  "opentimelineio",
+]
+
+[tool.uv]
+default-groups = ["audio", "subs", "vision"]
+# 動かす環境だけ解決する (サーバーは x86_64 Linux、手元は Mac)。これで新しい torch の cu126 ホイールが選ばれる
+environments = [
+  "sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "sys_platform == 'darwin'",
+]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu126", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
