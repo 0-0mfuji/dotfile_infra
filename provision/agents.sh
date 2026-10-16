@@ -179,7 +179,8 @@ install_dsh() {
   [ -d "$d/.git" ] || git clone --branch "$DSH_BRANCH" --single-branch "$DSH_REPO" "$d"
   cd "$d"
   if [ "$(git rev-parse HEAD)" != "$DSH_COMMIT" ]; then
-    git fetch --quiet origin "$DSH_BRANCH"
+    # フォークのブランチは履歴が書き換わることがある (固定したコミットがブランチから辿れなくなる)。まずSHAを直接取得する
+    git fetch --quiet origin "$DSH_COMMIT" || git fetch --quiet origin "$DSH_BRANCH"
     git checkout --quiet "$DSH_COMMIT"
   fi
   if [ "$(cat "$stamp" 2>/dev/null || true)" != "$DSH_COMMIT" ]; then
