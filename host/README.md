@@ -12,7 +12,7 @@ Debian 13 (UEFI) を最小インストールした直後の状態から、Incus�
 git clone git@github.com:0-0mfuji/dotfile_infra.git
 cd dotfile_infra/host
 
-sudo ./setup.sh          # 00-base, 10-ssh, 20-network, 30-zfs, 35-nvidia, 40-incus
+sudo ./setup.sh          # 00-base, 10-ssh, 20-network, 30-zfs, 35-nvidia, 40-incus, 45-media
 ```
 
 | step | 内容 |
@@ -23,6 +23,7 @@ sudo ./setup.sh          # 00-base, 10-ssh, 20-network, 30-zfs, 35-nvidia, 40-in
 | `30-zfs` | ZFSパッケージ導入 (`contrib`有効化) |
 | `35-nvidia` | NVIDIA公式ドライバ (`non-free`、DKMS)。**導入後に再起動が必要**。詳細は dotfiles_server の `docs/gpu.md` |
 | `40-incus` | Incus導入、`incus-admin`グループへ追加 |
+| `45-media` | 動画制作の共有ボリューム `dev-tank/media` -> `/srv/media` (上限 `MEDIA_QUOTA`、既定500G)。pool作成前は何もしないので、`storage-init` の後にもう一度 `sudo ./setup.sh 45` (`storage-init` も最後に呼ぶ) |
 
 特定のstepだけなら `sudo ./setup.sh 00 40`。
 

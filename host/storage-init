@@ -8,6 +8,7 @@
 #   $POOL            (既定: dev-tank, 単一ディスク・冗長性なし)
 #   $POOL/incus      Incus storage pool用 (OpenTofuの zfs_source に指定)
 #   $POOL/projects   /srv/projects にマウント
+#   $POOL/media      /srv/media にマウント (動画制作の共有ボリューム。steps/45-media.sh が作る。MEDIA_QUOTA で上限)
 set -euo pipefail
 
 [ "$(id -u)" -eq 0 ] || { echo "run with sudo" >&2; exit 1; }
@@ -53,6 +54,8 @@ zpool create -o ashift=12 -o autotrim=on \
   -O mountpoint=none "$POOL" "$id_path"
 zfs create "$POOL/incus"
 zfs create -o mountpoint=/srv/projects "$POOL/projects"
+
+bash "$(dirname "$(readlink -f "$0")")/steps/45-media.sh"
 
 zpool status "$POOL"
 echo "Next: set zfs_source = \"$POOL/incus\" in terraform.tfvars"

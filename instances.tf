@@ -48,6 +48,21 @@ resource "incus_instance" "dev" {
     }
   }
 
+  # 動画制作の共有ボリューム。shift=true で、コンテナ内の dev ユーザー (uid 1000) が読み書きできるようにする
+  dynamic "device" {
+    for_each = each.value.media == null ? [] : [each.value.media]
+    content {
+      name = "media"
+      type = "disk"
+      properties = {
+        source   = var.media_path
+        path     = var.media_path
+        shift    = "true"
+        readonly = tostring(device.value == "ro")
+      }
+    }
+  }
+
   device {
     name = "root"
     type = "disk"

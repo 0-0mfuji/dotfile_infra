@@ -31,6 +31,12 @@ variable "gpu_vendor_ids" {
   default     = ["10de"]
 }
 
+variable "media_path" {
+  description = "動画制作の共有ボリューム (ホストの ZFS dataset <pool>/media。host/steps/45-media.sh が作る) のホスト側のパス。コンテナ内でも同じパスにマウントする"
+  type        = string
+  default     = "/srv/media"
+}
+
 variable "dev_instances" {
   description = <<-EOT
     作成する開発用Instanceの定義。keyがそのままInstance名の接頭辞になり、
@@ -47,5 +53,11 @@ variable "dev_instances" {
     packages  = optional(list(string), []) # 基本パッケージに加えてこのInstanceに入れるaptパッケージ
     web_port  = optional(number) # サーバーのTailscale IPで待ち受ける、Web UI(コンテナの3080)への転送ポート。スマホ用
     ip        = optional(string) # Development Network内の固定IPv4 (例: "10.10.0.11")
+    media     = optional(string) # 共有ボリューム media_path を渡す。"rw" (読み書き) | "ro" (読み取り専用)。無ければ渡さない
   }))
+
+  validation {
+    condition     = alltrue([for k, v in var.dev_instances : v.media == null || contains(["rw", "ro"], v.media)])
+    error_message = "dev_instances の media は \"rw\" か \"ro\" (または未指定) にしてください。"
+  }
 }
