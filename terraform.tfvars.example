@@ -45,9 +45,27 @@ dev_instances = {
     memory    = "8GiB"
     disk_size = "80GiB"
   }
+  # --- 動画制作 (3つ1組。video が voice を呼ぶ。voice / blender は、必要になるまで作らなくてよい) ---
   video = {
     cpu       = 8
-    memory    = "16GiB"
+    memory    = "16GiB"        # Remotion(Chrome)の並列レンダリング用。1並列あたり1〜2GiB
     disk_size = "200GiB"
+    ip        = "10.10.0.20"   # 他と重ならない値にする。~/.ssh/config.local の HostName と合わせる
+    media     = "rw"           # 共有ボリューム /srv/media (host/steps/45-media.sh)
   }
+  voice = {
+    cpu       = 4
+    memory    = "4GiB"
+    disk_size = "30GiB"        # VOICEVOX ENGINE (展開後 数GB)
+    gpu       = false          # CPU版を使い、VRAM(8GB共有)を whisper / Blender に残す
+    media     = "rw"
+    ip        = "10.10.0.21"   # video からの呼び出し先 (http://10.10.0.21:50021)。web_port は付けない (VOICEVOXには認証が無い)
+  }
+  # blender = {
+  #   cpu       = 8
+  #   memory    = "16GiB"
+  #   disk_size = "100GiB"
+  #   ip        = "10.10.0.22"
+  #   media     = "rw"
+  # }
 }

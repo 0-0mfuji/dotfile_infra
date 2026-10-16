@@ -18,6 +18,7 @@ fi
 #   MOBILE_HOST=dev-server.<tailnet>.ts.net
 #   MOBILE_MAP="os-dev:8013 lang-dev:8011 cpu-dev:8012"   # コンテナ:ポート (tofuの web_port と同じ値)
 #   GIT_USER_NAME / GIT_USER_EMAIL   全コンテナの git と jj の既定の名前・メール
+#   VOICE_URL=http://10.10.0.21:50021   video-dev が呼ぶ VOICEVOX の URL (voice-dev の固定IP)。video-dev の ~/.profile と ~/.bashrc に環境変数として入る
 # shellcheck disable=SC1091
 [ -f "$HOME/.config/dev/provision.env" ] && source "$HOME/.config/dev/provision.env"
 
@@ -30,5 +31,5 @@ for i in "${instances[@]}"; do
   mp="$(mobile_port "$i")"
   incus exec "$i" -- rm -rf /tmp/provision
   incus file push -r "$DIR" "$i/tmp/"
-  incus exec "$i" --user 1000 --group 1000 --cwd /home/dev --env HOME=/home/dev --env USER=dev --env "MOBILE_HOST=${MOBILE_HOST:-}" --env "MOBILE_PORT=${mp:-}" --env "GIT_USER_NAME=${GIT_USER_NAME:-}" --env "GIT_USER_EMAIL=${GIT_USER_EMAIL:-}" --env "UPDATE=$update" --env "INSTANCE=$i" -- bash /tmp/provision/agents.sh
+  incus exec "$i" --user 1000 --group 1000 --cwd /home/dev --env HOME=/home/dev --env USER=dev --env "MOBILE_HOST=${MOBILE_HOST:-}" --env "MOBILE_PORT=${mp:-}" --env "GIT_USER_NAME=${GIT_USER_NAME:-}" --env "GIT_USER_EMAIL=${GIT_USER_EMAIL:-}" --env "VOICE_URL=${VOICE_URL:-}" --env "UPDATE=$update" --env "INSTANCE=$i" -- bash /tmp/provision/agents.sh
 done

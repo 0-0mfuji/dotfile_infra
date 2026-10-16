@@ -348,10 +348,162 @@ install_rust() {
   log "rust $(rustc --version | awk '{print $2}'): ok (cargo $(cargo --version | awk '{print $2}'))"
 }
 
+# uv: Pythonのインストーラ兼パッケージ管理。システムのPythonには pip install しない (Debian 13 はPEP 668で拒否する)。
+#   Pythonの版とライブラリは、各プロジェクトの pyproject.toml / uv.lock で固定する。公式のビルド済みバイナリをチェックサム検証して入れる
+install_uv() {
+  if command -v uv >/dev/null 2>&1 && [ "$(uv --version | awk '{print $2}')" = "$UV_VERSION" ]; then
+    log "uv $UV_VERSION: ok"; return
+  fi
+  local f="uv-x86_64-unknown-linux-gnu.tar.gz" tmp
+  tmp="$(mktemp -d)"
+  curl -fsSL "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/$f" -o "$tmp/$f"
+  echo "$UV_SHA256  $tmp/$f" | sha256sum -c - || { log "uv: checksum FAILED"; rm -rf "$tmp"; return; }
+  tar -xzf "$tmp/$f" -C "$tmp" --strip-components=1
+  sudo install -m 755 "$tmp/uv" "$tmp/uvx" /usr/local/bin/
+  rm -rf "$tmp"
+  log "uv $(uv --version | awk '{print $2}'): installed"
+}
+
+# video-dev 専用: 動画制作 (Remotion + ffmpeg)。npmのライブラリはここでは入れず、プロジェクトの package.json / lockfile で固定する。
+#   ffmpeg系: ffmpeg(ffprobe付き) / mediainfo / sox / imagemagick
+#   Remotion(Chrome Headless Shell)の実行に要るライブラリと、日本語フォント (無いと字幕が豆腐になる)
+VIDEO_PKGS=(ffmpeg mediainfo sox libsox-fmt-all imagemagick
+  fonts-noto-cjk fonts-noto-color-emoji
+  libnss3 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 libasound2t64 libxrandr2 libxkbcommon0 libxfixes3
+  libxcomposite1 libxdamage1 libpango-1.0-0 libcairo2 libcups2 libgbm1)
+
+install_video() {
+  local missing=() p
+  for p in "${VIDEO_PKGS[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
+  if [ "${#missing[@]}" -gt 0 ]; then
+    sudo apt-get update -qq >/dev/null 2>&1
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing[@]}" >/dev/null 2>&1 \
+      || { log "video: apt install FAILED (${missing[*]})"; return; }
+    log "video: installed ${missing[*]}"
+  fi
+  sudo corepack enable >/dev/null 2>&1 || true   # pnpm / yarn を、プロジェクトのpackageManagerの版で使えるようにする
+  install_uv
+  # GPUエンコード (ffmpeg の h264_nvenc): ホストのドライバと同じ版の libnvidia-encode1 を、同じDebianのAPTから入れる (libcuda1 と同じ理由)。
+  #   失敗しても止めない (CPUの libx264 で書き出せる)。自己点検が失敗するときは、Incusの gpu デバイスに video capability が渡っていない可能性
+  if [ -e /dev/nvidiactl ]; then
+    if ! dpkg -s libnvidia-encode1 >/dev/null 2>&1; then
+      sudo apt-get update -qq >/dev/null 2>&1
+      sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libnvidia-encode1 >/dev/null 2>&1 \
+        || log "video: WARNING: could not install libnvidia-encode1 (non-free が有効か。ホストのドライバと同じ版が要る)"
+    fi
+    if ffmpeg -v error -f lavfi -i nullsrc=s=256x256:d=0.1 -c:v h264_nvenc -f null - >/dev/null 2>&1; then
+      log "video: h264_nvenc: ok"
+    else
+      log "video: WARNING: h264_nvenc が使えない (CPUの libx264 は使える)。docs/gpu.md の「NVENC」を参照"
+    fi
+  fi
+  # 共有ボリューム (tofu の media = "rw") があれば、受け渡し用のフォルダを作る
+  [ -d /srv/media ] && [ -w /srv/media ] && mkdir -p /srv/media/audio /srv/media/renders /srv/media/out && log "video: /srv/media/{audio,renders,out}: ok"
+  # voice-dev の VOICEVOX の場所。ssh経由の非対話シェル (Zed / Claude Code / Remotion) でも読めるよう、~/.profile と ~/.bashrc の先頭に入れる
+  if [ -n "${VOICE_URL:-}" ]; then
+    local marker="# >>> voice url (provision) >>>" f
+    for f in "$HOME/.profile" "$HOME/.bashrc"; do
+      touch "$f"
+      grep -qF "$marker" "$f" && sed -i "/$marker/,/# <<< voice url (provision) <<</d" "$f"
+      { printf '%s\nexport VOICE_URL=%q\n# <<< voice url (provision) <<<\n' "$marker" "$VOICE_URL"; cat "$f"; } > "$f.new" && mv "$f.new" "$f"
+    done
+    log "video: VOICE_URL=$VOICE_URL"
+  fi
+  log "video: ffmpeg $(ffmpeg -version | head -1 | awk '{print $3}'): ok"
+}
+
+# voice-dev 専用: VOICEVOX ENGINE (CPU版) を、systemdで常駐させる。公式の7zをチェックサム検証して /opt に展開する。
+#   待ち受けは 0.0.0.0:50021 (コンテナ内)。認証が無いので、Incus proxy (web_port) でTailnetに出さない。video-dev などから、固定IPで呼ぶ。
+#   ずんだもん等の音声は、キャラクターごとの利用規約 (クレジット表記など) に従うこと。
+VOICEVOX_DIR=/opt/voicevox_engine
+
+install_voicevox() {
+  local ver_file="$VOICEVOX_DIR/.version"
+  if [ -r "$ver_file" ] && [ "$(cat "$ver_file")" = "$VOICEVOX_VERSION" ]; then
+    log "voicevox_engine $VOICEVOX_VERSION: ok"
+  else
+    local f="voicevox_engine-linux-cpu-x64-${VOICEVOX_VERSION}.7z.001" tmp sz
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq 7zip >/dev/null 2>&1 || { sudo apt-get update -qq >/dev/null 2>&1; sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq 7zip >/dev/null 2>&1; } \
+      || { log "voicevox: 7zip install FAILED"; return; }
+    sz="$(command -v 7zz || command -v 7z)" || { log "voicevox: 7z not found"; return; }
+    tmp="$(mktemp -d)"
+    log "downloading VOICEVOX ENGINE $VOICEVOX_VERSION (約1.8GB)..."
+    curl -fsSL "https://github.com/VOICEVOX/voicevox_engine/releases/download/${VOICEVOX_VERSION}/$f" -o "$tmp/$f" \
+      || { log "voicevox: download FAILED"; rm -rf "$tmp"; return; }
+    echo "$VOICEVOX_SHA256  $tmp/$f" | sha256sum -c - || { log "voicevox: checksum FAILED"; rm -rf "$tmp"; return; }
+    "$sz" x -y -o"$tmp/x" "$tmp/$f" >/dev/null || { log "voicevox: extract FAILED"; rm -rf "$tmp"; return; }
+    sudo rm -rf "$VOICEVOX_DIR"
+    sudo mkdir -p "$VOICEVOX_DIR"
+    sudo mv "$tmp"/x/*/* "$VOICEVOX_DIR"/ 2>/dev/null || sudo mv "$tmp"/x/* "$VOICEVOX_DIR"/
+    echo "$VOICEVOX_VERSION" | sudo tee "$ver_file" >/dev/null
+    sudo chmod 755 "$VOICEVOX_DIR/run"
+    rm -rf "$tmp"
+    log "voicevox_engine $VOICEVOX_VERSION: installed"
+  fi
+  local unit; unit="$(mktemp)"
+  cat > "$unit" <<UNIT
+[Unit]
+Description=VOICEVOX ENGINE (CPU)
+After=network.target
+
+[Service]
+User=dev
+ExecStart=$VOICEVOX_DIR/run --host 0.0.0.0 --port 50021
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+  sudo install -m 644 "$unit" /etc/systemd/system/voicevox-engine.service
+  rm -f "$unit"
+  sudo systemctl daemon-reload
+  sudo systemctl enable voicevox-engine.service >/dev/null 2>&1
+  sudo systemctl restart voicevox-engine.service
+  local _
+  for _ in $(seq 1 30); do
+    curl -fsS http://127.0.0.1:50021/version >/dev/null 2>&1 && { log "voicevox: serving on :50021 (version $(curl -fsS http://127.0.0.1:50021/version))"; return; }
+    sleep 2
+  done
+  log "voicevox: WARNING: API が応答しない (journalctl -u voicevox-engine で確認)"
+}
+
+# blender-dev 専用: Blender (ヘッドレスのレンダリング用)。公式のtarballをチェックサム検証して /opt に展開する。
+#   .blend の作成やキャラの設定はGUIが要るので、手元のMacで行い、ここではレンダリング・変換だけを行う。
+#   Rigify / Node Wrangler は同梱されているので、インストールではなく有効化する。VRM / MMD のアドオンは、必要になったらタグを固定して足す。
+BLENDER_PKGS=(libx11-6 libxext6 libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libgl1 libegl1)
+
+install_blender() {
+  local dir="/opt/blender-${BLENDER_VERSION}"
+  if [ -x "$dir/blender" ]; then
+    log "blender $BLENDER_VERSION: ok"
+  else
+    local f="blender-${BLENDER_VERSION}-linux-x64.tar.xz" series tmp
+    series="${BLENDER_VERSION%.*}"
+    sudo apt-get update -qq >/dev/null 2>&1
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${BLENDER_PKGS[@]}" xz-utils >/dev/null 2>&1 \
+      || { log "blender: apt install FAILED"; return; }
+    tmp="$(mktemp -d)"
+    log "downloading Blender $BLENDER_VERSION..."
+    curl -fsSL "https://download.blender.org/release/Blender${series}/$f" -o "$tmp/$f" || { log "blender: download FAILED"; rm -rf "$tmp"; return; }
+    echo "$BLENDER_SHA256  $tmp/$f" | sha256sum -c - || { log "blender: checksum FAILED"; rm -rf "$tmp"; return; }
+    sudo mkdir -p "$dir"
+    sudo tar -xJf "$tmp/$f" -C "$dir" --strip-components=1 --no-same-owner
+    rm -rf "$tmp"
+    log "blender $BLENDER_VERSION: installed"
+  fi
+  sudo ln -sfn "$dir/blender" /usr/local/bin/blender
+  install_uv
+  log "blender: $(blender -b --version 2>/dev/null | head -1)"
+}
+
 # インスタンス固有のツールチェーン。INSTANCE は provision/run が渡す
 install_toolchains() {
   case "${INSTANCE:-}" in
     lang-dev) install_ocaml; install_rust; install_mdbook ;;
+    video-dev) install_video ;;
+    voice-dev) install_voicevox ;;
+    blender-dev) install_blender ;;
     *) log "toolchain: none for '${INSTANCE:-?}'" ;;
   esac
 }
