@@ -534,7 +534,7 @@ install_web() {
   install_uv
   uv python install "$WEB_PYTHON_VERSION" >/dev/null 2>&1 || log "web: uv python install $WEB_PYTHON_VERSION FAILED"
   install_turso
-  log "web: node $(node -v) / uv $(uv --version | awk '{print $2}') / python $(uv python find "$WEB_PYTHON_VERSION" 2>/dev/null | xargs -r -I{} {} --version 2>/dev/null | awk '{print $2}') / git-lfs $(git lfs version 2>/dev/null | awk '{print $1}' | cut -d/ -f2): ok"
+  log "web: node $(node -v) / uv $(uv --version | awk '{print $2}') / python $("$(uv python find "$WEB_PYTHON_VERSION" 2>/dev/null)" --version 2>/dev/null | awk '{print $2}') / git-lfs $(git lfs version 2>/dev/null | awk '{print $1}' | cut -d/ -f2): ok"
 }
 
 # インスタンス固有のツールチェーン。INSTANCE は provision/run が渡す
