@@ -61,6 +61,14 @@ dev_instances = {
     media     = "rw"
     ip        = "10.10.0.21"   # video からの呼び出し先 (http://10.10.0.21:50021)。web_port は付けない (VOICEVOXには認証が無い)
   }
+  # --- Webアプリ開発 (igakutteru: React/Vite + Cloudflare Workers + Python パイプライン) ---
+  web = {
+    cpu       = 8
+    memory    = "16GiB"        # Vite / torch / DeepSeek Harnessのビルド (12GiB以上) 用。上限であり、予約ではない
+    disk_size = "150GiB"       # リポジトリ(.git 2GB + data/ 14GB)、node_modules、Pythonのvenv(torch)
+    ip        = "10.10.0.30"
+    web_port  = 8015           # スマホ用 (DeepSeek HarnessのWeb UI)。gpu は既定 true (パイプラインの torch 用)
+  }
   # blender = {
   #   cpu       = 8
   #   memory    = "16GiB"

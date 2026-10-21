@@ -500,6 +500,43 @@ install_blender() {
   log "blender: $(blender -b --version 2>/dev/null | head -1)"
 }
 
+# web-dev 専用: Webアプリ開発 (Node + Python)。プロジェクト (igakutteru) の依存は、プロジェクト側の lockfile で入れる。
+#   ここで入れるのは、コンテナ共通で要る道具だけ: git-lfs / zip / gh / corepack(pnpm) / uv + Python / turso。
+#   wrangler は apps/worker の devDependency、Playwright の Chromium は `playwright install --with-deps chromium` (プロジェクト側)。
+WEB_PKGS=(git-lfs zip unzip gh)
+
+install_turso() {
+  if command -v turso >/dev/null 2>&1 && turso --version 2>/dev/null | grep -q "$TURSO_VERSION"; then
+    log "turso $TURSO_VERSION: ok"; return
+  fi
+  local f="turso-cli_Linux_x86_64.tar.gz" tmp
+  tmp="$(mktemp -d)"
+  curl -fsSL "https://github.com/tursodatabase/turso-cli/releases/download/v${TURSO_VERSION}/$f" -o "$tmp/$f" \
+    || { log "turso: download FAILED"; rm -rf "$tmp"; return; }
+  echo "$TURSO_SHA256  $tmp/$f" | sha256sum -c - || { log "turso: checksum FAILED"; rm -rf "$tmp"; return; }
+  tar -xzf "$tmp/$f" -C "$tmp" turso
+  sudo install -m 755 "$tmp/turso" /usr/local/bin/turso
+  rm -rf "$tmp"
+  log "turso $TURSO_VERSION: installed"
+}
+
+install_web() {
+  local missing=() p
+  for p in "${WEB_PKGS[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
+  if [ "${#missing[@]}" -gt 0 ]; then
+    sudo apt-get update -qq >/dev/null 2>&1
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing[@]}" >/dev/null 2>&1 \
+      || { log "web: apt install FAILED (${missing[*]})"; return; }
+    log "web: installed ${missing[*]}"
+  fi
+  git lfs install --skip-repo >/dev/null 2>&1 || log "web: git lfs install FAILED"
+  sudo corepack enable >/dev/null 2>&1 || true   # pnpm を、プロジェクトの packageManager の版で使えるようにする
+  install_uv
+  uv python install "$WEB_PYTHON_VERSION" >/dev/null 2>&1 || log "web: uv python install $WEB_PYTHON_VERSION FAILED"
+  install_turso
+  log "web: node $(node -v) / uv $(uv --version | awk '{print $2}') / python $(uv python find "$WEB_PYTHON_VERSION" 2>/dev/null | xargs -r -I{} {} --version 2>/dev/null | awk '{print $2}') / git-lfs $(git lfs version 2>/dev/null | awk '{print $1}' | cut -d/ -f2): ok"
+}
+
 # インスタンス固有のツールチェーン。INSTANCE は provision/run が渡す
 install_toolchains() {
   case "${INSTANCE:-}" in
@@ -507,6 +544,7 @@ install_toolchains() {
     video-dev) install_video ;;
     voice-dev) install_voicevox ;;
     blender-dev) install_blender ;;
+    web-dev) install_web ;;
     *) log "toolchain: none for '${INSTANCE:-?}'" ;;
   esac
 }
