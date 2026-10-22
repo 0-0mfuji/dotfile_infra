@@ -503,7 +503,7 @@ install_blender() {
 # web-dev 専用: Webアプリ開発 (Node + Python)。プロジェクト (igakutteru) の依存は、プロジェクト側の lockfile で入れる。
 #   ここで入れるのは、コンテナ共通で要る道具だけ: git-lfs / zip / gh / corepack(pnpm) / uv + Python / turso。
 #   wrangler は apps/worker の devDependency、Playwright の Chromium は `playwright install --with-deps chromium` (プロジェクト側)。
-WEB_PKGS=(git-lfs zip unzip gh)
+WEB_PKGS=(git-lfs zip unzip gh zstd)  # zstd: Macからの大きなデータ転送 (docs/web.md) を圧縮するため
 
 install_turso() {
   if command -v turso >/dev/null 2>&1 && turso --version 2>/dev/null | grep -q "$TURSO_VERSION"; then
