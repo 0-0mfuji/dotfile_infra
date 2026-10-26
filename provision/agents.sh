@@ -330,7 +330,7 @@ install_mdbook() {
   log "mdbook $(mdbook --version | awk '{print $2}'): installed"
 }
 
-# lang-dev 専用: Rust (比較・参照用に、Rustのborrow checkerの挙動を試す)。rustup-init は公式のチェックサムで検証する
+# lang-dev / blender-dev: Rust。rustup-init は公式のチェックサムで検証する
 #   ツールチェーン: RUST_VERSION (versions.env) / clippy, rustfmt, rust-analyzer, rust-src
 install_rust() {
   export PATH="$HOME/.cargo/bin:$PATH"
@@ -483,12 +483,22 @@ UNIT
   log "voicevox: WARNING: API が応答しない (journalctl -u voicevox-engine で確認)"
 }
 
-# blender-dev 専用: Blender (ヘッドレスのレンダリング用)。公式のtarballをチェックサム検証して /opt に展開する。
+# blender-dev 専用: BlenderとRust製形状生成ライブラリの開発環境。
 #   .blend の作成やキャラの設定はGUIが要るので、手元のMacで行い、ここではレンダリング・変換だけを行う。
 #   Rigify / Node Wrangler は同梱されているので、インストールではなく有効化する。VRM / MMD のアドオンは、必要になったらタグを固定して足す。
 BLENDER_PKGS=(libx11-6 libxext6 libxi6 libxxf86vm1 libxfixes3 libxrender1 libxkbcommon0 libsm6 libgl1 libegl1)
+BLENDER_DEV_PKGS=(build-essential pkg-config cmake ninja-build clang lld python3-dev git-lfs unzip)
 
 install_blender() {
+  # Blender導入済みでも実行し、後から追加された依存を既存コンテナにも反映する。
+  sudo apt-get update -qq
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+    "${BLENDER_PKGS[@]}" "${BLENDER_DEV_PKGS[@]}" xz-utils
+  install_rust
+  rustc +"$RUST_VERSION" --version
+  rustup component add --toolchain "$RUST_VERSION" rustfmt clippy rust-analyzer rust-src
+  rustup target add --toolchain "$RUST_VERSION" wasm32-unknown-unknown
+  git lfs install --skip-repo
   local dir="/opt/blender-${BLENDER_VERSION}"
   if [ -x "$dir/blender" ]; then
     log "blender $BLENDER_VERSION: ok"
