@@ -494,6 +494,11 @@ install_blender() {
   sudo apt-get update -qq
   sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
     "${BLENDER_PKGS[@]}" "${BLENDER_DEV_PKGS[@]}" xz-utils
+  # libcuda1が選ぶNVIDIA GLX alternativeにもGLVNDを供給する。
+  # libgl1だけではMesa側へdivertされ、libGL.so.1が見えなくなる場合がある。
+  if [ -e /dev/nvidiactl ]; then
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq libgl1-nvidia-glvnd-glx
+  fi
   install_rust
   rustc +"$RUST_VERSION" --version
   rustup component add --toolchain "$RUST_VERSION" rustfmt clippy rust-analyzer rust-src
@@ -519,7 +524,9 @@ install_blender() {
   fi
   sudo ln -sfn "$dir/blender" /usr/local/bin/blender
   install_uv
-  log "blender: $(blender -b --version 2>/dev/null | head -1)"
+  local blender_version
+  blender_version="$(blender -b --version)"
+  log "blender: ${blender_version%%$'\n'*}"
 }
 
 # web-dev 専用: Webアプリ開発 (Node + Python)。プロジェクト (igakutteru) の依存は、プロジェクト側の lockfile で入れる。
