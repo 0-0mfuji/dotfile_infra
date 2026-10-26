@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Debianサーバー上から専用コンテナだけを導入。開発用provision/runは使わない。
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+instance="${1:-secretary-dev}"
+[[ "$instance" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]*$ ]] || exit 2
+mode="${2:-nanomuse}"
+case "$mode" in hermes) installer=install ;; nanomuse) installer=install ;; *) echo "usage: $0 [instance] [hermes|nanomuse]" >&2; exit 2 ;; esac
+incus exec "$instance" -- cloud-init status --wait
+staging="$(incus exec "$instance" -- mktemp -d /tmp/secretary.XXXXXXXX)"
+trap 'incus exec "$instance" -- rm -rf "$staging"' EXIT
+incus file push -r "$DIR" "$instance$staging/"
+incus exec "$instance" -- bash "$staging/secretary/$installer" "$mode"
+
+if [ "$mode" = nanomuse ]; then
+  listen="$(incus config device get "$instance" nanomuse listen 2>/dev/null || true)"
+  if [[ "$listen" =~ ^tcp:(100\.[0-9]+\.[0-9]+\.[0-9]+):([0-9]+)$ ]]; then
+    printf 'http://%s:%s/\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" | \
+      incus exec "$instance" -- runuser -u secretary -- bash -c 'umask 077; cat > "$HOME/.config/secretary/mobile-url"'
+  fi
+fi

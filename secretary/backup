@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# コンテナ内の管理者用。ageの公開recipientで暗号化し、平文アーカイブは作らない。
+set -euo pipefail
+[ "$(id -u)" -eq 0 ] || { echo 'sudoで実行してください' >&2; exit 1; }
+recipient="${1:?usage: sudo /opt/secretary/backup <age-recipient>}"
+[[ "$recipient" = age1* || "$recipient" = ssh-* ]] || { echo 'age / SSHの公開recipientを指定してください' >&2; exit 2; }
+command -v age >/dev/null
+install -d -m 700 /var/backups/secretary
+out="$(mktemp /var/backups/secretary/backup-XXXXXXXX.age)"
+units=(secretary-nanomuse.service secretary-hermes.service secretary-notes.service secretary-gateway.service secretary-timetree.timer)
+active=()
+for unit in "${units[@]}"; do
+  if systemctl is-active --quiet "$unit"; then active+=("$unit"); fi
+done
+complete=0
+cleanup() {
+  [ "$complete" -eq 1 ] || rm -f "$out"
+  for unit in "${active[@]}"; do systemctl start "$unit" || true; done
+}
+trap cleanup EXIT
+systemctl stop "${units[@]}" secretary-timetree.service
+# 再導入できるコード・ダウンロード済みランタイムは含めない。
+extra=()
+for path in home/secretary/.nanomuse srv/secretary/nanomuse-workspace etc/secretary-notes.env; do
+  [ ! -e "/$path" ] || extra+=("$path")
+done
+tar -C / --exclude=home/secretary/.hermes/hermes-agent --exclude=home/secretary/.cache \
+  -cf - home/secretary/.hermes home/secretary/.config/secretary \
+  srv/secretary/documents var/lib/secretary-timetree "${extra[@]}" \
+  | age -r "$recipient" -o "$out"
+complete=1
+printf '暗号化バックアップ: %s\n' "$out"

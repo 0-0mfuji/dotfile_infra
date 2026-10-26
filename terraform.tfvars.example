@@ -42,7 +42,7 @@ dev_instances = {
   }
   flutter = {
     cpu       = 4
-    memory    = "8GiB"
+    memory    = "16GiB"
     disk_size = "80GiB"
   }
   # --- 動画制作 (3つ1組。video が voice を呼ぶ。voice / blender は、必要になるまで作らなくてよい) ---

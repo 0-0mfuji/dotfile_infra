@@ -29,6 +29,10 @@ mobile_port() {  # $1=instance -> ポート (無ければ空)
 
 for i in "${instances[@]}"; do
   echo "==> $i"
+  if [ "$i" = secretary-dev ]; then
+    "$DIR/../secretary/provision" "$i"
+    continue
+  fi
   mp="$(mobile_port "$i")"
   incus exec "$i" -- rm -rf /tmp/provision
   incus file push -r "$DIR" "$i/tmp/"

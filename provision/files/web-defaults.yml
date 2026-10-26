@@ -11,7 +11,14 @@
     providers:
       ollama-cloud:
         models:
-          - id: deepSeek-v4.1-flash
+          - id: deepseek-v4.1-flash:1017
+            name: Deep Seek V4.1 Flash 1017
+            contextWindow: 1000000
+            maxTokens: 384000
+            input:
+              - text
+              - image
+          - id: deepseek-v4.1-flash
             name: Deep Seek V4.1 Flash
             contextWindow: 1000000
             maxTokens: 384000
@@ -31,4 +38,4 @@
   name: "@deepseek-ai/dsh-agent-default-model"
   config:
     provider: ollama-cloud
-    model: deepSeek-v4.1-flash
+    model: deepseek-v4.1-flash:1017

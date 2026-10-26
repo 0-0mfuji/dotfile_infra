@@ -4,6 +4,11 @@
 # ログイン情報とAPIキーは扱わない (各コンテナ内で、利用者が初回に入力する)。
 set -euo pipefail
 
+if [ "${INSTANCE:-$(hostname)}" = secretary-dev ]; then
+  echo "secretary-dev は secretary/provision を使ってください (開発用ツールは導入しません)" >&2
+  exit 1
+fi
+
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=./versions.env
 source "$DIR/versions.env"
@@ -30,6 +35,13 @@ install_node() {
   sudo tar -xJf "$tmp/$f" -C /usr/local --strip-components=1 --no-same-owner
   rm -rf "$tmp"; hash -r
   log "node $(node -v): installed"
+}
+
+install_gh() {
+  if command -v gh >/dev/null 2>&1; then log "gh: ok"; return; fi
+  sudo apt-get update -qq
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq gh
+  log "gh: installed"
 }
 
 install_jj() {
@@ -501,9 +513,9 @@ install_blender() {
 }
 
 # web-dev 専用: Webアプリ開発 (Node + Python)。プロジェクト (igakutteru) の依存は、プロジェクト側の lockfile で入れる。
-#   ここで入れるのは、コンテナ共通で要る道具だけ: git-lfs / zip / gh / corepack(pnpm) / uv + Python / turso。
+#   ここで入れるのは、コンテナ共通で要る道具だけ: git-lfs / zip / corepack(pnpm) / uv + Python / turso。
 #   wrangler は apps/worker の devDependency、Playwright の Chromium は `playwright install --with-deps chromium` (プロジェクト側)。
-WEB_PKGS=(git-lfs zip unzip gh zstd)  # zstd: Macからの大きなデータ転送 (docs/web.md) を圧縮するため
+WEB_PKGS=(git-lfs zip unzip zstd)  # zstd: Macからの大きなデータ転送 (docs/web.md) を圧縮するため
 
 install_turso() {
   if command -v turso >/dev/null 2>&1 && turso --version 2>/dev/null | grep -q "$TURSO_VERSION"; then
@@ -520,6 +532,22 @@ install_turso() {
   log "turso $TURSO_VERSION: installed"
 }
 
+install_zola() {
+  if command -v zola >/dev/null 2>&1 && [ "$(zola --version)" = "zola $ZOLA_VERSION" ]; then
+    log "zola $ZOLA_VERSION: ok"; return
+  fi
+  local f="zola-v${ZOLA_VERSION}-x86_64-unknown-linux-gnu.tar.gz" tmp
+  tmp="$(mktemp -d)"
+  curl -fsSL "https://github.com/getzola/zola/releases/download/v${ZOLA_VERSION}/$f" -o "$tmp/$f" \
+    || { log "zola: download FAILED"; rm -rf "$tmp"; return 1; }
+  echo "$ZOLA_SHA256  $tmp/$f" | sha256sum -c - >/dev/null \
+    || { log "zola: checksum FAILED"; rm -rf "$tmp"; return 1; }
+  tar -xzf "$tmp/$f" -C "$tmp" zola
+  sudo install -m 755 "$tmp/zola" /usr/local/bin/zola
+  rm -rf "$tmp"
+  log "zola $ZOLA_VERSION: installed"
+}
+
 install_web() {
   local missing=() p
   for p in "${WEB_PKGS[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
@@ -534,8 +562,12 @@ install_web() {
   install_uv
   uv python install "$WEB_PYTHON_VERSION" >/dev/null 2>&1 || log "web: uv python install $WEB_PYTHON_VERSION FAILED"
   install_turso
+  install_zola
   log "web: node $(node -v) / uv $(uv --version | awk '{print $2}') / python $("$(uv python find "$WEB_PYTHON_VERSION" 2>/dev/null)" --version 2>/dev/null | awk '{print $2}') / git-lfs $(git lfs version 2>/dev/null | awk '{print $1}' | cut -d/ -f2): ok"
 }
+
+# shellcheck source=./flutter.sh
+source "$DIR/flutter.sh"
 
 # インスタンス固有のツールチェーン。INSTANCE は provision/run が渡す
 install_toolchains() {
@@ -545,6 +577,7 @@ install_toolchains() {
     voice-dev) install_voicevox ;;
     blender-dev) install_blender ;;
     web-dev) install_web ;;
+    flutter-dev) install_flutter; install_android ;;
     *) log "toolchain: none for '${INSTANCE:-?}'" ;;
   esac
 }
@@ -553,6 +586,7 @@ install_sftp
 install_qrencode
 install_gpu
 install_node
+install_gh
 install_jj
 configure_vcs
 install_agent_clis

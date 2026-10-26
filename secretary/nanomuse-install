@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# NanoMuseを標準の秘書として導入し、旧試用文書を統合する。
+set -euo pipefail
+[ "$(id -u)" -eq 0 ] || exit 1
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DIR/versions.env"
+id secretary >/dev/null
+[ -x /usr/local/bin/secretary ] || { echo '先に secretary/provision を実行してください' >&2; exit 1; }
+apt-get update
+apt-get install -y python3-venv curl ca-certificates
+install -d -m 755 /opt/nanomuse
+if [ "$(cat /opt/nanomuse/commit 2>/dev/null || true)" != "$NANOMUSE_COMMIT" ]; then
+  work="$(mktemp -d)"
+  trap 'rm -rf "$work"' EXIT
+  curl -fsSL "https://codeload.github.com/nano-muse/nanoMuse/tar.gz/$NANOMUSE_COMMIT" -o "$work/source.tar.gz"
+  echo "$NANOMUSE_SOURCE_SHA256  $work/source.tar.gz" | sha256sum -c -
+  install -d "/opt/nanomuse/$NANOMUSE_COMMIT"
+  tar -xzf "$work/source.tar.gz" -C "/opt/nanomuse/$NANOMUSE_COMMIT" --strip-components=1
+  python3 -m venv "/opt/nanomuse/$NANOMUSE_COMMIT/.venv"
+  "/opt/nanomuse/$NANOMUSE_COMMIT/.venv/bin/pip" install "/opt/nanomuse/$NANOMUSE_COMMIT"
+  ln -sfn "/opt/nanomuse/$NANOMUSE_COMMIT" /opt/nanomuse/current
+  echo "$NANOMUSE_COMMIT" > /opt/nanomuse/commit
+fi
+install -d -m 700 -o secretary -g secretary /home/secretary/.nanomuse
+if [ ! -e /home/secretary/.nanomuse/config.toml ]; then
+  install -m 600 -o secretary -g secretary "$DIR/files/nanomuse.toml" /home/secretary/.nanomuse/config.toml
+fi
+systemctl stop secretary-nanomuse.service secretary-hermes.service secretary-gateway.service 2>/dev/null || true
+install -m 644 "$DIR/files/migrate-nanomuse.py" /opt/secretary/
+python3 /opt/secretary/migrate-nanomuse.py
+systemctl disable secretary-hermes.service secretary-gateway.service 2>/dev/null || true
+guide="/srv/secretary/documents/NanoMuseの使い方.md"
+if [ ! -e "$guide" ] || [ "$(sha256sum "$guide" | cut -d ' ' -f 1)" = ff60e6ce4e1760b40c810ac6b4f9542cb04f6082cba35f8429edbeeeffe8cb97 ]; then
+  install -m 660 -o secretary -g secretary "$DIR/documents/NanoMuseの使い方.md" /srv/secretary/documents/
+fi
+install -m 644 "$DIR/files/nanomuse-mobile.py" /opt/secretary/
+install -m 644 "$DIR/files/secretary-nanomuse.service" /etc/systemd/system/
+install -m 755 "$DIR/backup" /opt/secretary/backup
+systemctl daemon-reload
+systemctl enable secretary-nanomuse.service
+systemctl restart secretary-nanomuse.service
+echo 'NanoMuseを追加しました。Macで secretary nanomuse を実行してください。'

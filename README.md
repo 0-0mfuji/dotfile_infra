@@ -28,7 +28,7 @@ MacBook --(ssh)--> Development Server --(このリポジトリをclone)--> tofu 
 ## 構成
 
 ```
-provision/                コンテナの中身の構築 (Node.js, git/jj, Claude Code/Codex, DeepSeek Harness)
+provision/                コンテナの中身の構築 (Node.js, git/jj, GitHub CLI (gh), Claude Code/Codex, DeepSeek Harness)
 host/                     Debianホストの構築 (SSH/WoL/Tailscale/ZFS/Incus導入、ディスク初期化)
 install.sh                Development ServerへOpenTofu CLIをインストールする
 versions.tf              provider バージョン制約 ("terraform"ブロックのまま。OpenTofu互換)
@@ -82,6 +82,20 @@ tofu plan
 tofu apply
 ```
 
+## 更新をサーバーへ反映する
+
+Macで変更をコミットしてGitHubへpushした後、Development Serverでこのリポジトリを更新する。
+サーバーのcheckoutを直接編集せず、Gitを更新経路にする。
+
+```sh
+cd ~/dotfile_infra
+git pull --ff-only
+```
+
+変更後は対象Instanceに対して `./provision/run <instance>` など、このREADMEや各環境の手順に
+記載されたprovisionコマンドを実行する。OpenTofuの構成変更は、`tofu plan` で差分を確認してから
+`tofu apply` する。pull前にサーバー側の変更が残っている場合は、消さずにコミットまたは退避してから更新する。
+
 ## 注意事項
 
 - **cloud-initはInstanceの初回起動時にしか実行されない。** `packages` などを変えても、
@@ -98,3 +112,34 @@ tofu apply
   含まれない想定だが、環境固有の値のためコミットしない。
 - provider/リソースのスキーマはバージョンにより変わることがあるため、
   実際に `tofu init` したバージョンの公式ドキュメントを確認すること。
+
+## Flutter / Android
+
+`flutter-dev` は `provision/flutter.sh` がFlutter (Dart同梱)、Turso CLI、
+corepack/pnpm、Linuxビルドツール、JDK 21とAndroid SDK/NDKを導入する。
+Flutter・Android Command-line Tools・SDK/NDKの版は `provision/versions.env` で管理する。
+Honoなどのアプリ依存はプロジェクトのlockfileに置く。
+
+```sh
+./provision/run flutter-dev
+```
+
+初回にAndroid SDKのライセンス確認が求められた場合は、devユーザーで
+`~/Android/Sdk/cmdline-tools/latest/bin/sdkmanager --licenses` を実行してから再実行する。
+MacのWebプレビューとAndroidエミュレーターへのAPK転送は
+[dotfiles_serverのFlutter手順](https://github.com/0-0mfuji/dotfiles_server/blob/main/docs/flutter.md) を参照。
+
+GitHub CLI (`gh`) は全コンテナの共通プロビジョニングで導入する。既存コンテナには `./provision/run` で反映する (稼働中の全 `*-dev`。停止中のものは起動後に実行)。認証は各コンテナで行い、Mac の `dev` 起動時に未認証なら案内する。
+
+### 私用秘書（NanoMuse）
+
+`systemd-inhibit --what=sleep --mode=block ./secretary/provision secretary-dev` で導入・更新する。
+既定はNanoMuse 1.0.7。固定commitとSHA-256は `secretary/versions.env`。
+Macの `dev secretary` でlocalhost:8787の認証付きUIを開く。
+文書は `/srv/secretary/documents` をSilverBulletと共有する。
+旧試用workspaceは自動統合し、統合前の両方をroot専用backupに保存する。
+旧Hermesとgatewayは停止して自動起動を無効化し、履歴・設定は保持する。
+外部連携は既存OAuth/readonly MCP。詳細はdotfiles_serverの `docs/secretary.md`。
+
+秘書をスマホで開く場合は `secretary.nanomuse_port = 8787` と `mobile_bind_ip` を設定し、
+計画を確認してapply後にprovisionを実行する。Macの `secretary mobile` でTailnet内専用の認証付きQRを表示する。

@@ -1,5 +1,5 @@
 locals {
-  base_packages = ["openssh-server", "git", "curl", "ca-certificates", "build-essential", "bubblewrap", "qrencode"]
+  base_packages = ["openssh-server", "git", "gh", "curl", "ca-certificates", "build-essential", "bubblewrap", "qrencode"]
 }
 
 resource "incus_instance" "dev" {
