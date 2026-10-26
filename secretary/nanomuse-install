@@ -25,18 +25,13 @@ install -d -m 700 -o secretary -g secretary /home/secretary/.nanomuse
 if [ ! -e /home/secretary/.nanomuse/config.toml ]; then
   install -m 600 -o secretary -g secretary "$DIR/files/nanomuse.toml" /home/secretary/.nanomuse/config.toml
 fi
-systemctl stop secretary-nanomuse.service secretary-hermes.service secretary-gateway.service 2>/dev/null || true
+systemctl stop secretary-nanomuse.service
 install -m 644 "$DIR/files/migrate-nanomuse.py" /opt/secretary/
 python3 /opt/secretary/migrate-nanomuse.py
-systemctl disable secretary-hermes.service secretary-gateway.service 2>/dev/null || true
-guide="/srv/secretary/documents/NanoMuseの使い方.md"
-if [ ! -e "$guide" ] || [ "$(sha256sum "$guide" | cut -d ' ' -f 1)" = ff60e6ce4e1760b40c810ac6b4f9542cb04f6082cba35f8429edbeeeffe8cb97 ]; then
-  install -m 660 -o secretary -g secretary "$DIR/documents/NanoMuseの使い方.md" /srv/secretary/documents/
-fi
 install -m 644 "$DIR/files/nanomuse-mobile.py" /opt/secretary/
 install -m 644 "$DIR/files/secretary-nanomuse.service" /etc/systemd/system/
 install -m 755 "$DIR/backup" /opt/secretary/backup
 systemctl daemon-reload
 systemctl enable secretary-nanomuse.service
 systemctl restart secretary-nanomuse.service
-echo 'NanoMuseを追加しました。Macで secretary nanomuse を実行してください。'
+echo 'NanoMuseを追加しました。Macで dev secretary を実行してください。'

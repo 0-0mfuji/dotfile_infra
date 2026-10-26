@@ -133,13 +133,13 @@ GitHub CLI (`gh`) は全コンテナの共通プロビジョニングで導入�
 
 ### 私用秘書（NanoMuse）
 
-`systemd-inhibit --what=sleep --mode=block ./secretary/provision secretary-dev` で導入・更新する。
+`systemd-inhibit --what=sleep --mode=block ./provision/run secretary-dev` で導入・更新する。
 既定はNanoMuse 1.0.7。固定commitとSHA-256は `secretary/versions.env`。
 Macの `dev secretary` でlocalhost:8787の認証付きUIを開く。
 文書は `/srv/secretary/documents` をSilverBulletと共有する。
 旧試用workspaceは自動統合し、統合前の両方をroot専用backupに保存する。
-旧Hermesとgatewayは停止して自動起動を無効化し、履歴・設定は保持する。
+旧Hermes・gatewayの起動経路は廃止し、履歴・認証情報・旧実行ファイルはroot専用領域へ退避する。
 外部連携は既存OAuth/readonly MCP。詳細はdotfiles_serverの `docs/secretary.md`。
 
 秘書をスマホで開く場合は `secretary.nanomuse_port = 8787` と `mobile_bind_ip` を設定し、
-計画を確認してapply後にprovisionを実行する。Macの `secretary mobile` でTailnet内専用の認証付きQRを表示する。
+計画を確認してapply後にprovisionを実行する。Macの `dev secretary mobile` でTailnet内専用の認証付きQRを表示する。

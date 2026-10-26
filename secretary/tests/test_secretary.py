@@ -21,7 +21,7 @@ class SecretaryTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         root = Path(self.temp.name)
-        self.patches = patch.multiple(s, ROOT=root / 'config', HERMES=root / 'hermes', TT_ROOT=root / 'timetree')
+        self.patches = patch.multiple(s, ROOT=root / 'config', TT_ROOT=root / 'timetree')
         self.patches.start()
         self.nano_patch = patch.object(s, 'NANOMUSE', root / 'nanomuse')
         self.nano_patch.start()
@@ -30,9 +30,6 @@ class SecretaryTests(unittest.TestCase):
 
     def test_readiness_does_not_disclose_credentials_or_connect(self):
         from types import SimpleNamespace
-        s.HERMES.mkdir()
-        (s.HERMES / 'config.yaml').write_text('model:\n  provider: ollama-cloud\n  default: selected-model\n')
-        (s.HERMES / '.env').write_text('OLLAMA_API_KEY=DO-NOT-PRINT\n')
         s.write_json(s.ROOT / 'gmail.json', {'client_id': 'private-id', 'refresh_token': 'private-token'})
         s.write_json(s.ROOT / 'connections.json', {'plane': {'url': 'https://private.invalid', 'key': 'plane_api_private-key', 'workspace': 'private-space'}})
         out = io.StringIO()
@@ -40,7 +37,7 @@ class SecretaryTests(unittest.TestCase):
             s.readiness()
         req.assert_not_called()
         report = out.getvalue()
-        self.assertIn('model\tready\t', report)
+        self.assertIn('nanomuse-model\tpending\t', report)
         self.assertIn('gmail\tready\t', report)
         self.assertIn('outlook\tpending\t', report)
         self.assertIn('plane\tready\t', report)
@@ -61,24 +58,7 @@ class SecretaryTests(unittest.TestCase):
         self.assertIn('nanomuse-model\tready\t', out.getvalue())
         self.assertNotIn('DO-NOT-PRINT', out.getvalue())
 
-    def test_upstream_auto_defaults_are_not_configured(self):
-        from types import SimpleNamespace
-        s.HERMES.mkdir()
-        (s.HERMES / 'config.yaml').write_text('model:\n  provider: auto\n  default: anthropic/default-model\n')
-        out = io.StringIO()
-        with patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=3)), contextlib.redirect_stdout(out):
-            s.readiness()
-        self.assertIn('model\tpending\t', out.getvalue())
 
-    def test_readiness_checks_ollama_key_not_just_model_name(self):
-        from types import SimpleNamespace
-        s.HERMES.mkdir()
-        (s.HERMES / 'config.yaml').write_text('model:\n  provider: ollama-cloud\n  default: selected-model\n')
-        out = io.StringIO()
-        with patch.dict(os.environ, {'OLLAMA_API_KEY': ''}), patch.object(s.subprocess, 'run', return_value=SimpleNamespace(returncode=3)), contextlib.redirect_stdout(out):
-            s.readiness()
-        self.assertIn('model\tpending\t', out.getvalue())
-        self.assertIn('notes\tpending\t', out.getvalue())
 
     def test_api_setup_uses_private_defaults_without_enabling_unconfigured_tools(self):
         s.write_json(s.ROOT / 'connection-defaults.json', {
@@ -249,21 +229,6 @@ class SecretaryTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 s.safe_url(url)
 
-    def test_init_preserves_user_settings_and_soul(self):
-        import yaml
-        s.HERMES.mkdir()
-        (s.HERMES / 'SOUL.md').write_text('my personal instructions')
-        (s.HERMES / 'config.yaml').write_text('model:\n  provider: custom\n  default: private-model\nterminal:\n  cwd: /my/docs\nmcp_servers:\n  existing:\n    command: tool\n')
-        s.configure_hermes()
-        s.configure_hermes()
-        value = yaml.safe_load((s.HERMES / 'config.yaml').read_text())
-        self.assertEqual(value['model']['default'], 'private-model')
-        self.assertEqual(value['terminal']['cwd'], '/my/docs')
-        self.assertIn('existing', value['mcp_servers'])
-        soul = (s.HERMES / 'SOUL.md').read_text()
-        self.assertTrue(soul.startswith('my personal instructions'))
-        self.assertEqual(soul.count('<!-- secretary operating instructions -->'), 1)
-        self.assertIn('/srv/secretary/documents', soul)
 
 
 if __name__ == '__main__':

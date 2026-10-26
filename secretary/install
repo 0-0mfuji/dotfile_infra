@@ -4,8 +4,7 @@ set -euo pipefail
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=versions.env
 source "$DIR/versions.env"
-backend="${1:-nanomuse}"
-case "$backend" in nanomuse|hermes) ;; *) exit 2 ;; esac
+[ "$#" -eq 0 ] || { echo "usage: secretary/install" >&2; exit 2; }
 apt-get update
 apt-get install -y curl ca-certificates git unzip python3 python3-yaml age
 id secretary >/dev/null 2>&1 || useradd --create-home --shell /bin/bash secretary
@@ -22,9 +21,9 @@ if [ -f /srv/secretary/documents/.silverbullet.auth.json ] && [ ! -L /srv/secret
   chown secretary-notes:secretary-documents /srv/secretary/documents/.silverbullet.auth.json
   chmod 600 /srv/secretary/documents/.silverbullet.auth.json
 fi
-install -d -m 700 -o secretary -g secretary /home/secretary/.config/secretary /home/secretary/.hermes
+install -d -m 700 -o secretary -g secretary /home/secretary/.config/secretary
 install -d -m 755 /opt/secretary
-install -m 644 "$DIR/files/secretary.py" "$DIR/files/SECRETARY.md" /opt/secretary/
+install -m 644 "$DIR/files/secretary.py" /opt/secretary/
 install -m 755 "$DIR/files/secretary" /usr/local/bin/secretary
 install -m 755 "$DIR/backup" /opt/secretary/backup
 install -m 644 "$DIR/versions.env" /opt/secretary/versions.env
@@ -34,7 +33,9 @@ for folder in inbox daily hobbies plans mail attachments; do
 done
 for doc in "$DIR/documents/"*.md; do
   target="/srv/secretary/documents/$(basename "$doc")"
-  [ -e "$target" ] || install -m 660 -o secretary -g secretary-documents "$doc" "$target"
+  if [ ! -e "$target" ] || { [ ! -L "$target" ] && grep -qFx "$(sha256sum "$target" | cut -d ' ' -f 1)  ${doc##*/}" "$DIR/documents/previous-sha256"; }; then
+    install -m 660 -o secretary -g secretary-documents "$doc" "$target"
+  fi
 done
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
@@ -50,38 +51,17 @@ if [ ! -x /usr/local/bin/silverbullet ] || [ "$(cat /opt/secretary/silverbullet.
   install -m 755 "$work/sb/silverbullet" /usr/local/bin/silverbullet
   echo "$SILVERBULLET_VERSION" > /opt/secretary/silverbullet.version
 fi
-if [ "$backend" = hermes ]; then
-if [ ! -x /home/secretary/.local/bin/hermes ] || [ "$(runuser -u secretary -- git -C /home/secretary/.hermes/hermes-agent rev-parse HEAD 2>/dev/null || true)" != "$HERMES_COMMIT" ]; then
-  curl -fsSL "https://raw.githubusercontent.com/NousResearch/hermes-agent/$HERMES_VERSION/scripts/install.sh" -o "$work/hermes-install.sh"
-  echo "$HERMES_INSTALL_SHA256  $work/hermes-install.sh" | sha256sum -c -
-  install -m 644 "$work/hermes-install.sh" /opt/secretary/hermes-install.sh
-  systemctl stop secretary-hermes.service secretary-gateway.service 2>/dev/null || true
-  runuser -u secretary -- env HOME=/home/secretary bash /opt/secretary/hermes-install.sh \
-    --commit "$HERMES_COMMIT" --non-interactive --skip-browser --skip-computer-use
-  [ "$(runuser -u secretary -- git -C /home/secretary/.hermes/hermes-agent rev-parse HEAD)" = "$HERMES_COMMIT" ]
-  echo "$HERMES_COMMIT" > /opt/secretary/hermes.commit
-fi
-# Web UIの公式言語選択を、未選択のブラウザだけ日本語に初期化する。
-install -m 644 "$DIR/files/seed-web-locale.py" /opt/secretary/seed-web-locale.py
-runuser -u secretary -- python3 /opt/secretary/seed-web-locale.py \
-  /home/secretary/.hermes/hermes-agent/hermes_cli/web_dist/index.html
-
-fi
-
-install -m 644 "$DIR/files/"*.service "$DIR/files/"*.timer /etc/systemd/system/
+for unit in secretary-nanomuse.service secretary-notes.service secretary-timetree.service secretary-timetree.timer; do
+  install -m 644 "$DIR/files/$unit" /etc/systemd/system/
+done
 # devは管理用。AIが動くsecretaryユーザーにはsudo権限を付けない。
 cat > /etc/sudoers.d/secretary-operator <<'SUDO'
 dev ALL=(secretary) NOPASSWD: /usr/local/bin/secretary *
 SUDO
 chmod 440 /etc/sudoers.d/secretary-operator
 systemctl daemon-reload
-if [ "$backend" = hermes ]; then
-  runuser -u secretary -- env HOME=/home/secretary secretary init
-  systemctl enable secretary-hermes.service
-  systemctl restart secretary-hermes.service
-else
-  bash "$DIR/nanomuse-install"
-fi
+bash "$DIR/retire-hermes"
+bash "$DIR/nanomuse-install"
 # SilverBulletはログイン設定後にのみ起動する。
 if [ -s /etc/secretary-notes.env ]; then systemctl enable secretary-notes; systemctl restart secretary-notes; fi
-echo '導入完了。管理用SSHから sudo -u secretary secretary setup を実行してください。'
+echo '導入完了。Macで dev secretary を実行してください。'

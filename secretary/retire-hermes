@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# 廃止したHermesの履歴・認証情報・実行ファイルをroot専用領域へ退避する。
+set -euo pipefail
+[ "$(id -u)" -eq 0 ] || exit 1
+paths=(
+  /home/secretary/.hermes
+  /home/secretary/.local/bin/hermes
+  /home/secretary/.local/bin/hermes-acp
+  /home/secretary/.local/bin/hermes-agent
+  /etc/systemd/system/secretary-hermes.service
+  /etc/systemd/system/secretary-gateway.service
+  /opt/secretary/hermes-install.sh
+  /opt/secretary/hermes.commit
+  /opt/secretary/seed-web-locale.py
+  /opt/secretary/SECRETARY.md
+  /etc/systemd/system/._secretary*.service
+  /etc/systemd/system/._secretary*.timer
+)
+present=()
+for path in "${paths[@]}"; do
+  if [ -e "$path" ] || [ -L "$path" ]; then present+=("$path"); fi
+done
+[ "${#present[@]}" -gt 0 ] || exit 0
+for unit in secretary-hermes.service secretary-gateway.service; do
+  systemctl disable --now "$unit" 2>/dev/null || true
+  if systemctl is-active --quiet "$unit"; then
+    echo "旧サービスを停止できません: $unit" >&2
+    exit 1
+  fi
+done
+install -d -m 700 /var/backups/secretary
+archive="$(mktemp -d /var/backups/secretary/retired-hermes-XXXXXXXX)"
+chmod 700 "$archive"
+for path in "${present[@]}"; do
+  destination="$archive/${path#/}"
+  mkdir -p "$(dirname "$destination")"
+  mv "$path" "$destination"
+done
+systemctl daemon-reload
+systemctl reset-failed secretary-hermes.service secretary-gateway.service 2>/dev/null || true
+printf '旧Hermesの履歴・認証情報を保管: %s\n' "$archive"

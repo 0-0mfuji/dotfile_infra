@@ -23,7 +23,6 @@ import urllib.request
 
 ROOT = Path(os.environ.get('SECRETARY_CONFIG', str(Path.home() / '.config/secretary')))
 NANOMUSE = Path.home() / '.nanomuse'
-HERMES = Path(os.environ.get('HERMES_HOME', str(Path.home() / '.hermes')))
 DOCS = Path('/srv/secretary/documents')
 TT_ROOT = Path('/var/lib/secretary-timetree')
 
@@ -81,37 +80,6 @@ def safe_url(value):
 def prompt(label, default=''):
     value = input(f'{label}' + (f' [{default}]' if default else '') + ': ').strip()
     return value or default
-
-
-def configure_hermes():
-    import yaml
-    HERMES.mkdir(parents=True, exist_ok=True, mode=0o700)
-    config_path = HERMES / 'config.yaml'
-    config = yaml.safe_load(config_path.read_text()) if config_path.exists() else {}
-    config = config or {}
-    config.setdefault('terminal', {}).setdefault('cwd', str(DOCS))
-    config.setdefault('model', {}).setdefault('provider', 'ollama-cloud')
-    config.setdefault('mcp_servers', {})['secretary'] = {
-        'command': '/usr/bin/python3', 'args': ['/opt/secretary/secretary.py', 'mcp'],
-    }
-    # User-supplied values are never replaced by init, except the managed MCP entry.
-    temp = config_path.with_suffix('.tmp')
-    with temp.open('w') as out:
-        os.chmod(temp, 0o600)
-        yaml.safe_dump(config, out, allow_unicode=True, sort_keys=False)
-    temp.replace(config_path)
-    instructions = HERMES / 'SOUL.md'
-    # The upstream installer already seeds SOUL.md on a fresh machine.
-    # Preserve that content and add our scoped operating rules once.
-    marker = '<!-- secretary operating instructions -->'
-    previous = instructions.read_text() if instructions.exists() else ''
-    if marker not in previous:
-        seed = Path(__file__).with_name('SECRETARY.md').read_text()
-        temporary = instructions.with_suffix('.tmp')
-        with temporary.open('w') as out:
-            os.chmod(temporary, 0o600)
-            out.write(previous.rstrip() + '\n\n' + marker + '\n' + seed)
-        temporary.replace(instructions)
 
 
 def oauth_config(kind):
@@ -238,7 +206,7 @@ def api_config(kind):
     # Read-only methods are enforced by the connector; credentials may have broader rights.
     cfg[kind] = value
     write_json(ROOT / 'connections.json', cfg)
-    print('保存しました。secretary doctor --check で接続確認できます。')
+    print('保存しました。dev secretary doctor で接続確認できます。')
 
 
 def api_get(kind, path):
@@ -409,13 +377,13 @@ def mcp():
             # Upstream bodies/URLs may contain private content or credentials.
             detail = f'HTTP {exc.code}' if isinstance(exc, urllib.error.HTTPError) else type(exc).__name__
             response = {'jsonrpc': '2.0', 'id': message.get('id') if isinstance(message, dict) else None,
-                        'result': {'isError': True, 'content': [{'type': 'text', 'text': f'接続/処理に失敗: {detail}。secretary doctor --check で確認してください。'}]}}
+                        'result': {'isError': True, 'content': [{'type': 'text', 'text': f'接続/処理に失敗: {detail}。dev secretary doctor で確認してください。'}]}}
         print(json.dumps(response, ensure_ascii=False), flush=True)
 
 
 def notes_config():
     if os.geteuid() != 0:
-        raise ValueError('管理用devユーザーから sudo secretary notes-config を実行してください')
+        raise ValueError('Macで dev secretary setup notes を実行してください')
     user = prompt('SilverBulletのログイン名', 'owner')
     password = getpass.getpass('SilverBulletのパスワード（12文字以上）: ')
     if len(password) < 12 or any(c in user + password for c in '\n\r"\\') or ':' in user:
@@ -542,23 +510,6 @@ def timetree_sync():
 
 def readiness():
     """Report configuration presence only; no credentials or external calls."""
-    import yaml
-    config = yaml.safe_load((HERMES / 'config.yaml').read_text()) if (HERMES / 'config.yaml').exists() else {}
-    config = config or {}
-    model = config.get('model') or {}
-    if isinstance(model, str):
-        model = {'default': model}
-    env_file = HERMES / '.env'
-    cloud_key = bool(os.environ.get('OLLAMA_API_KEY'))
-    if env_file.exists():
-        for line in env_file.read_text().splitlines():
-            key, sep, value = line.strip().removeprefix('export ').partition('=')
-            if sep and key.strip() == 'OLLAMA_API_KEY' and value.strip().strip('"\''):
-                cloud_key = True
-    # Upstream seeds an automatic provider/model even before credentials exist.
-    model_ready = bool(model.get('default')) and model.get('provider') not in (None, 'auto')
-    if model.get('provider', 'ollama-cloud') == 'ollama-cloud':
-        model_ready = model_ready and cloud_key
     nano_ready = False
     token_file = NANOMUSE / 'server_token'
     if token_file.exists():
@@ -572,7 +523,6 @@ def readiness():
     def active(unit):
         return subprocess.run(['systemctl', 'is-active', '--quiet', unit], capture_output=True).returncode == 0
     statuses = [('nanomuse-model', nano_ready, 'NanoMuseモデル'),
-                ('model', model_ready, 'Ollama Cloud・モデル（設定有無のみ）'),
                 ('notes', active('secretary-notes.service'), 'SilverBulletログイン・起動')]
     for kind, label in [('gmail', 'Gmail OAuth'), ('outlook', 'outlook.jp OAuth')]:
         credential = read_json(ROOT / (kind + '.json'))
@@ -589,14 +539,13 @@ def readiness():
     snapshot = read_json(TT_ROOT / 'cache/snapshot.json')
     tt_status = read_json(TT_ROOT / 'cache/status.json')
     statuses.append(('timetree', bool(snapshot.get('fetched_at')) and not tt_status.get('error'), 'TimeTree共有予定（キャッシュ取得済みか）'))
-    statuses.append(('gateway', active('secretary-gateway.service'), 'チャット・定期通知（任意）'))
     for key, configured, label in statuses:
         print(key + '\t' + ('ready' if configured else 'pending') + '\t' + label)
 
 
 def doctor(check=False):
     print('文書フォルダ:', 'OK' if DOCS.is_dir() else '未導入')
-    for unit in ('secretary-nanomuse', 'secretary-hermes', 'secretary-notes', 'secretary-gateway', 'secretary-timetree.timer'):
+    for unit in ('secretary-nanomuse', 'secretary-notes', 'secretary-timetree.timer'):
         state = subprocess.run(['systemctl', 'is-active', unit], capture_output=True, text=True).stdout.strip()
         print(unit + ':', state or 'unknown')
     cfg = read_json(ROOT / 'connections.json')
@@ -629,8 +578,8 @@ def doctor(check=False):
 
 def setup(part=None):
     choices = {'model': 'Ollama Cloud・モデル', 'notes': 'SilverBulletログイン', 'gmail': 'Gmail認証', 'outlook': 'outlook.jp認証',
-               'plane': 'Plane', 'karakeep': 'Karakeep', 'timetree': 'TimeTree共有予定', 'gateway': 'チャット・通知先'}
-    if part is None:
+               'plane': 'Plane', 'karakeep': 'Karakeep', 'timetree': 'TimeTree共有予定', 'notifications': 'チャット・通知先'}
+    if not part:
         while True:
             for i, (key, label) in enumerate(choices.items(), 1):
                 print(f'{i}) {label} ({key})')
@@ -649,12 +598,12 @@ def setup(part=None):
     elif part in ('plane', 'karakeep'):
         api_config(part)
     elif part == 'notes':
-        print('管理用SSHで実行: sudo secretary notes-config')
+        print('Macで実行: dev secretary setup notes')
     elif part == 'timetree':
-        print('管理用SSHで実行: sudo secretary timetree-config')
+        print('Macで実行: dev secretary setup timetree')
     elif part == 'model':
         print('NanoMuseのSettings → Connectionsでモデルを設定してください。Mac: dev secretary')
-    elif part == 'gateway':
+    elif part == 'notifications':
         print('NanoMuseのWeb UIのChannelsから通知先を設定してください。')
     else:
         raise ValueError('Unknown setup section')
@@ -663,24 +612,19 @@ def setup(part=None):
 
 def main():
     parser = argparse.ArgumentParser(description='私用秘書の設定・診断。秘密情報は文書フォルダへ保存しません。')
-    parser.add_argument('command', choices=['init', 'setup', 'readiness', 'doctor', 'chat', 'mcp', 'notes-config', 'timetree-config', 'timetree-calendars', 'timetree-sync'])
+    parser.add_argument('command', choices=['setup', 'readiness', 'doctor', 'mcp', 'notes-config', 'timetree-config', 'timetree-calendars', 'timetree-sync'])
     parser.add_argument('section', nargs='?')
     parser.add_argument('--check', action='store_true', help='接続テストを実施（メール本文は表示しない）')
     args = parser.parse_args()
     if args.command == 'mcp':
         mcp()
         return 0
-    if args.command == 'init':
-        configure_hermes()
-    elif args.command == 'setup':
+    if args.command == 'setup':
         setup(args.section)
     elif args.command == 'readiness':
         readiness()
     elif args.command == 'doctor':
         return doctor(args.check)
-    elif args.command == 'chat':
-        print('Macで dev secretary または secretary chat を実行してください。')
-        return 0
     elif args.command == 'notes-config':
         notes_config()
     elif args.command == 'timetree-calendars':
