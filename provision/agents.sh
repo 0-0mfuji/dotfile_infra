@@ -571,6 +571,11 @@ install_web() {
     sudo apt-get update -qq
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
       libgl1-nvidia-glvnd-glx libegl1 libgles2 nvidia-egl-icd nvidia-vulkan-icd vulkan-tools
+    # glx-diversions が移動した GLVND の EGL/GLES dispatch を loader に公開する。
+    local multiarch
+    multiarch="$(dpkg-architecture -qDEB_HOST_MULTIARCH)"
+    printf '/usr/lib/mesa-diverted/%s\n' "$multiarch" | sudo tee /etc/ld.so.conf.d/dev-glvnd.conf >/dev/null
+    sudo ldconfig
   fi
   local missing=() p
   for p in "${WEB_PKGS[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
