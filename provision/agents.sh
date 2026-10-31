@@ -570,7 +570,7 @@ install_web() {
   if [ -e /dev/nvidiactl ]; then
     sudo apt-get update -qq
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-      libgl1-nvidia-glvnd-glx libegl1 libgles2 libegl-nvidia0 nvidia-vulkan-icd vulkan-tools
+      libgl1-nvidia-glvnd-glx libegl1 libgles2 nvidia-egl-icd nvidia-vulkan-icd vulkan-tools
   fi
   local missing=() p
   for p in "${WEB_PKGS[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
