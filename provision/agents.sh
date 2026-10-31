@@ -566,6 +566,12 @@ install_zola() {
 }
 
 install_web() {
+  # Headless Chromium の ANGLE/Vulkan 用。ホストと同じ Debian NVIDIA 版を使う。
+  if [ -e /dev/nvidiactl ]; then
+    sudo apt-get update -qq
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+      libgl1-nvidia-glvnd-glx libegl-nvidia0 nvidia-vulkan-icd vulkan-tools
+  fi
   local missing=() p
   for p in "${WEB_PKGS[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || missing+=("$p"); done
   if [ "${#missing[@]}" -gt 0 ]; then
