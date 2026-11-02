@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 # サーバー上で実行する。指定したコンテナ (省略時は稼働中の全 *-dev) にプロビジョニングを流す。
-# Usage: provision/run [--update] [instance ...]
+# Usage: provision/run [--update | --gpu-sandbox] [instance ...]
+#   --gpu-sandbox は Harness の GPU runner のみ更新 (稼働中の Web UI は設定変更時に再起動)。
 #   --update  Claude Code / Codex / claude-agent-acp / codex-acp を最新版にする (付けなければ、入っている版のまま)
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+gpu_sandbox=0
+if [ "${1:-}" = --gpu-sandbox ]; then gpu_sandbox=1; shift; fi
 
 update=0
 if [ "${1:-}" = "--update" ]; then update=1; shift; fi
@@ -30,11 +34,16 @@ mobile_port() {  # $1=instance -> ポート (無ければ空)
 for i in "${instances[@]}"; do
   echo "==> $i"
   if [ "$i" = secretary-dev ]; then
+    if [ "$gpu_sandbox" = 1 ]; then echo "no DeepSeek Harness in secretary-dev; skipping"; continue; fi
     "$DIR/../secretary/provision" "$i"
     continue
   fi
   mp="$(mobile_port "$i")"
   incus exec "$i" -- rm -rf /tmp/provision
   incus file push -r "$DIR" "$i/tmp/"
+  if [ "$gpu_sandbox" = 1 ]; then
+    incus exec "$i" --user 1000 --group 1000 --cwd /home/dev --env HOME=/home/dev --env USER=dev -- bash /tmp/provision/gpu-sandbox
+    continue
+  fi
   incus exec "$i" --user 1000 --group 1000 --cwd /home/dev --env HOME=/home/dev --env USER=dev --env "MOBILE_HOST=${MOBILE_HOST:-}" --env "MOBILE_PORT=${mp:-}" --env "GIT_USER_NAME=${GIT_USER_NAME:-}" --env "GIT_USER_EMAIL=${GIT_USER_EMAIL:-}" --env "VOICE_URL=${VOICE_URL:-}" --env "UPDATE=$update" --env "INSTANCE=$i" -- bash /tmp/provision/agents.sh
 done

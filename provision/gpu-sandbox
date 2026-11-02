@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# dev ユーザーで実行。Harness の Web / ACP / CLI に限定した GPU 公開。
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+runner_dir=/usr/local/lib/dev-dsh/bin
+sudo install -d -m 755 "$runner_dir"
+sudo install -m 755 "$DIR/files/dsh-bwrap" "$runner_dir/bwrap"
+sudo install -m 755 "$DIR/files/dsh-acp" /usr/local/bin/dsh-acp
+sudo install -m 755 "$DIR/files/dsh-gpu" /usr/local/bin/dsh-gpu
+# 起動済みプロセスの PATH は変わらないので、設定変更時だけサービスを再起動する。
+unit_dir=/etc/systemd/system/dsh-web.service.d
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+cat > "$tmp" <<'UNIT'
+[Service]
+Environment=PATH=/usr/local/lib/dev-dsh/bin:/usr/local/bin:/usr/bin:/bin
+UNIT
+sudo mkdir -p "$unit_dir"
+if ! cmp -s "$tmp" "$unit_dir/gpu-sandbox.conf"; then
+  sudo install -m 644 "$tmp" "$unit_dir/gpu-sandbox.conf"
+  sudo systemctl daemon-reload
+  if systemctl is-active --quiet dsh-web.service; then
+    sudo systemctl restart dsh-web.service
+  fi
+fi
+"$runner_dir/bwrap" --ro-bind / / --dev /dev --unshare-pid --proc /proc --die-with-parent -- true
+printf '[provision] Harness GPU sandbox installed (Web / ACP / dsh-gpu)\n'

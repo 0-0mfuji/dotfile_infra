@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Harness 専用 PATH で使用する。既存の bwrap policy に GPU device のみ追加する。
+set -euo pipefail
+args=()
+found_separator=0
+for arg in "$@"; do
+  if [ "$arg" = -- ]; then
+    found_separator=1
+    break
+  fi
+  args+=("$arg")
+done
+if [ "$found_separator" != 1 ]; then
+  echo 'bwrap: dsh GPU runner requires a command separator' >&2
+  exit 2
+fi
+shift "${#args[@]}"
+shift
+shopt -s nullglob
+for device in /dev/nvidia[0-9]* /dev/nvidiactl /dev/nvidia-uvm /dev/nvidia-uvm-tools /dev/nvidia-modeset /dev/dri/renderD[0-9]*; do
+  [ -c "$device" ] || continue
+  args+=(--dev-bind "$device" "$device")
+done
+exec /usr/bin/bwrap "${args[@]}" -- "$@"

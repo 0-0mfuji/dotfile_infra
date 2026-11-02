@@ -619,6 +619,7 @@ install_jj
 configure_vcs
 install_agent_clis
 install_sandbox
+bash "$DIR/gpu-sandbox"
 install_instruction_files
 install_dsh
 install_plugins

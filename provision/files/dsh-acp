@@ -5,6 +5,8 @@
 # stdout はACPのプロトコル専用なので、何も出力しない。
 set -euo pipefail
 
+export PATH="/usr/local/lib/dev-dsh/bin:$PATH"
+
 web="${DSH_ACP_WEB_PATCH:-$HOME/.dsh/profiles/web/cordis.patch.yml}"
 acp="${DSH_ACP_PATCH:-$HOME/.dsh/profiles/acp/cordis.patch.yml}"
 

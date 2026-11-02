@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# 対話 CLI も Web / ACP と同じ GPU sandbox runner で起動する。
+set -euo pipefail
+export PATH="/usr/local/lib/dev-dsh/bin:$PATH"
+exec pnpm --dir "$HOME/src/deepseek-harness" -s dsh "$@"
