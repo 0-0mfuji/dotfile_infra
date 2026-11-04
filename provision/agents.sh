@@ -532,7 +532,14 @@ install_blender() {
 # web-dev 専用: Webアプリ開発 (Node + Python)。プロジェクト (igakutteru) の依存は、プロジェクト側の lockfile で入れる。
 #   ここで入れるのは、コンテナ共通で要る道具だけ: git-lfs / zip / corepack(pnpm) / uv + Python / turso。
 #   wrangler は apps/worker の devDependency、Playwright の Chromium は `playwright install --with-deps chromium` (プロジェクト側)。
-WEB_PKGS=(git-lfs zip unzip zstd)  # zstd: Macからの大きなデータ転送 (docs/web.md) を圧縮するため
+WEB_PKGS=(
+  git-lfs zip unzip zstd
+  # ネイティブ Vulkan レンダラの構成とシェーダのビルド。
+  build-essential cmake pkgconf glslc libvulkan-dev
+  # GLFW を submodule からビルドする場合の X11 / Wayland 開発用ファイル。
+  libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+  libwayland-dev libxkbcommon-dev
+)
 
 install_turso() {
   if command -v turso >/dev/null 2>&1 && turso --version 2>/dev/null | grep -q "$TURSO_VERSION"; then
