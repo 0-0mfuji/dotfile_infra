@@ -50,6 +50,6 @@ Generate outputs in stages to ensure both breadth and depth:
 
 ## Secretary runtime
 
-Prefer the corresponding `kt-*` skill and its dedicated MCP tool for existing extraction workflows. When a tool returns a job ID, wait and check with `secretary_tools__job_status(job_id=..., wait_seconds=45)`; repeat while running. Do not use shell sleep or generic Python just to wait. Report completed, failed, or interrupted accurately. Custom analysis code still follows the client’s normal execution permissions.
+Prefer the corresponding `kt-*` skill and its dedicated MCP tool for existing extraction workflows. When a tool returns a job ID, wait and check with `secretary_tools__job_status(job_id=..., wait_seconds=45)`; repeat while queued or running. Do not use shell sleep or generic Python just to wait. Report completed, failed, or interrupted accurately. Custom analysis code still follows the client’s normal execution permissions.
 
 Use local exports under `/srv/secretary/karakeep-tool/data/`. Use `secretary_tools__inspect` and the corresponding `kt-*` skill for deterministic extraction. Save results locally; identify data coverage and omissions rather than claiming completeness without checking.

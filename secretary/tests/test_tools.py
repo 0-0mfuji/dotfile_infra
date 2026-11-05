@@ -71,6 +71,21 @@ command = "unchanged"
 
 
 class ToolBoundaryTests(unittest.TestCase):
+    def test_job_wait_handles_worker_startup_queue(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder); status = root / 'status.json'
+            status.write_text(json.dumps({'state': 'queued'}))
+            def finish(_):
+                status.write_text(json.dumps({'state': 'completed'}))
+            with patch.object(tools, 'job_folder', return_value=root), \
+                 patch.object(tools.os, 'kill') as kill, \
+                 patch.object(tools.time, 'monotonic', side_effect=[0, 0, 1]), \
+                 patch.object(tools.time, 'sleep', side_effect=finish) as sleep:
+                result = tools.invoke('job_status', {'job_id': 'test', 'wait_seconds': 45})
+            self.assertEqual(result['state'], 'completed')
+            kill.assert_not_called()
+            sleep.assert_called_once_with(0.5)
+
     def test_job_wait_returns_as_soon_as_completed(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder); status = root / 'status.json'

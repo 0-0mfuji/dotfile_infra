@@ -294,7 +294,7 @@ def invoke(name, args):
                 except ProcessLookupError:
                     value.update(state='interrupted', error='worker stopped; inspect output before retrying')
             remaining = deadline - time.monotonic()
-            if value['state'] != 'running' or remaining <= 0:
+            if value['state'] not in ('queued', 'running') or remaining <= 0:
                 break
             time.sleep(min(0.5, remaining))
         log = folder / 'output.log'
