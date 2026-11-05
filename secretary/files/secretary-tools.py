@@ -221,7 +221,8 @@ def specs():
         ('catalog', '利用可能なKarakeepツールと制約を一覧表示する。実行しない。', {}, []),
         ('inspect', '固定版のツールソースと引数・制約を読む。--helpを実行しない。', {'path': string}, ['path']),
         ('run', '固定版Karakeep-toolをジョブとして実行。外部変更や上書きの対象を確認して使う。', {'path': string, 'args': args}, ['path']),
-        ('job_status', '実行ジョブの完了状態とログ末尾を確認。失敗を成功と報告しない。', {'job_id': string}, ['job_id']),
+        ('job_status', 'ジョブ状態とログを確認。完了待ちはwait_seconds=45で行い、shellのsleepは使わない。最長45秒で状態を返す。',
+         {'job_id': string, 'wait_seconds': {'type': 'integer', 'minimum': 0, 'maximum': 45}}, ['job_id']),
         ('karakeep_read', 'Karakeep CLIの固定された読み取り操作。認証情報はサービスが渡す。', {'args': args}, ['args']),
         ('karakeep_create', 'KarakeepへURLまたはノートを1件登録。既存記事は変更・削除しない。',
          {'url': string, 'note': string}, []),
@@ -280,13 +281,22 @@ def invoke(name, args):
         check_legacy_access(args['path'], args.get('args', []))
         return start_job('tool', args)
     if name == 'job_status':
+        wait = args.get('wait_seconds', 0)
+        if type(wait) is not int or not 0 <= wait <= 45:
+            raise ValueError('wait_seconds must be an integer from 0 to 45')
         folder = job_folder(args['job_id'])
-        value = json.loads((folder / 'status.json').read_text())
-        if value['state'] == 'running':
-            try:
-                os.kill(value['pid'], 0)
-            except ProcessLookupError:
-                value.update(state='interrupted', error='worker stopped; inspect output before retrying')
+        deadline = time.monotonic() + wait
+        while True:
+            value = json.loads((folder / 'status.json').read_text())
+            if value['state'] == 'running':
+                try:
+                    os.kill(value['pid'], 0)
+                except ProcessLookupError:
+                    value.update(state='interrupted', error='worker stopped; inspect output before retrying')
+            remaining = deadline - time.monotonic()
+            if value['state'] != 'running' or remaining <= 0:
+                break
+            time.sleep(min(0.5, remaining))
         log = folder / 'output.log'
         if log.exists():
             with log.open('rb') as stream:

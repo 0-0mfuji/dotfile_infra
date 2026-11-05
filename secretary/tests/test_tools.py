@@ -71,6 +71,46 @@ command = "unchanged"
 
 
 class ToolBoundaryTests(unittest.TestCase):
+    def test_job_wait_returns_as_soon_as_completed(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder); status = root / 'status.json'
+            status.write_text(json.dumps({'state': 'running', 'pid': 123}))
+            def finish(_):
+                status.write_text(json.dumps({'state': 'completed'}))
+            with patch.object(tools, 'job_folder', return_value=root), \
+                 patch.object(tools.os, 'kill'), \
+                 patch.object(tools.time, 'monotonic', side_effect=[0, 0, 1]), \
+                 patch.object(tools.time, 'sleep', side_effect=finish) as sleep:
+                result = tools.invoke('job_status', {'job_id': 'test', 'wait_seconds': 45})
+            self.assertEqual(result['state'], 'completed')
+            sleep.assert_called_once_with(0.5)
+
+    def test_job_wait_stops_at_deadline_and_preserves_running(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'status.json').write_text(json.dumps({'state': 'running', 'pid': 123}))
+            with patch.object(tools, 'job_folder', return_value=root), \
+                 patch.object(tools.os, 'kill'), \
+                 patch.object(tools.time, 'monotonic', side_effect=[0, 45]), \
+                 patch.object(tools.time, 'sleep') as sleep:
+                result = tools.invoke('job_status', {'job_id': 'test', 'wait_seconds': 45})
+            self.assertEqual(result['state'], 'running')
+            sleep.assert_not_called()
+
+    def test_job_wait_validates_bound_and_preserves_interruption(self):
+        for value in (-1, 46, True, 0.5, '45'):
+            with self.assertRaises(ValueError):
+                tools.invoke('job_status', {'job_id': 'test', 'wait_seconds': value})
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'status.json').write_text(json.dumps({'state': 'running', 'pid': 123}))
+            with patch.object(tools, 'job_folder', return_value=root), \
+                 patch.object(tools.os, 'kill', side_effect=ProcessLookupError), \
+                 patch.object(tools.time, 'sleep') as sleep:
+                result = tools.invoke('job_status', {'job_id': 'test', 'wait_seconds': 45})
+            self.assertEqual(result['state'], 'interrupted')
+            sleep.assert_not_called()
+
     def test_rejects_traversal_and_symlink_escape(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder); docs = root / 'docs'; docs.mkdir()

@@ -1,35 +1,19 @@
 ---
 name: karakeep
-description: Official skill for how to use karakeep (the bookmark manager) and interact with it programmatically.
+description: Karakeepの記事検索・参照・登録・タグ整理と更新計画を、秘書専用MCPで操作する。ブックマーク整理の依頼で使う。
 metadata:
   tags: bookmarks, bookmark manager, 2nd brain, productivity
-  openclaw:
-    envVars:
-      - name: KARAKEEP_API_KEY
-        required: true
-        description: The API key for your Karakeep instance
-      - name: KARAKEEP_SERVER_ADDR
-        required: false
-        description: The server address for your Karakeep instance.
-    requires:
-      env:
-        - KARAKEEP_API_KEY
-        - KARAKEEP_SERVER_ADDR
-      bins:
-        - karakeep
-    homepage: https://karakeep.app
-    links:
-      repository: https://github.com/karakeep-app/karakeep
-      documentation: https://docs.karakeep.app
-    emoji: 📦
-    cliHelp: karakeep --help
-    install:
-      - kind: node
-        package: "@karakeep/cli"
-        bins: [karakeep]
+  homepage: https://karakeep.app
+  links:
+    repository: https://github.com/karakeep-app/karakeep
+    documentation: https://docs.karakeep.app
 ---
 
 # Karakeep
+
+## Secretary execution tools
+
+Use the dedicated `secretary_tools__karakeep_*` MCP tools described in the Secretary runtime section. The CLI examples below explain arguments; do not execute them through shell. Credentials are managed by the gateway: do not request API keys or read credential files. Reads and typed single-item operations return directly. Plans use `karakeep_plan_status`, not job_status; show pending server-side fetching as pending instead of sleeping in shell.
 
 Karakeep is an open source self-hosted bookmark manager for collecting, organizing, and searching content. This skill covers the core concepts and how to interact with Karakeep via the CLI.
 
@@ -124,44 +108,9 @@ Karakeep can also be used to consume RSS feeds, but also can itself act as an RS
 - **Rule Engine**: If-this-then-that rules to auto-tag, favorite, or route bookmarks to lists.
 - **Webhooks**: Subscribe to bookmark events (add/update/archive).
 
-## Interacting with Karakeep via the CLI
+## CLI argument reference
 
-### Installation
-
-```bash
-npm install -g @karakeep/cli
-```
-
-Or via Docker:
-
-```bash
-docker run --rm ghcr.io/karakeep-app/karakeep-cli:release --help
-```
-
-### Authentication
-
-The CLI requires an API key and server address. Get the API key from your Karakeep instance's settings page.
-
-**Option 1 — Environment variables (recommended):**
-
-```bash
-export KARAKEEP_API_KEY="your-api-key"
-
-# If self-hosted, pass the server address as well. It defaults to the cloud instance if not set:
-export KARAKEEP_SERVER_ADDR="https://cloud.karakeep.com"
-```
-
-**Option 2 — CLI flags:**
-
-```bash
-karakeep --api-key <key> --server-addr <addr> <command>
-```
-
-**Verify authentication:**
-
-```bash
-karakeep whoami
-```
+These examples explain the upstream CLI syntax, not commands to run in this assistant. Use the dedicated MCP tools above. If no dedicated tool supports an operation, report that limitation; do not bypass it through shell or request credentials.
 
 ### Bookmark Commands
 
