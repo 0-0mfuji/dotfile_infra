@@ -58,13 +58,20 @@ profile=/home/secretary/.dsh/profiles/web/package.json
 if ! grep -q '"@deepseek-ai/dsh-subagent-codex"' "$profile" 2>/dev/null; then
   as_secretary /usr/local/bin/secretary-dsh plugin --profile web add "link:$source_dir/packages/subagent/subagent-codex"
 fi
-as_secretary /opt/nanomuse/current/.venv/bin/python "$DIR/tooling/codex-config.py"
-as_secretary python3 "$DIR/tooling/dsh-skills.py" /home/secretary/.nanomuse/skills /home/secretary/.agents/skills Codex
+# The host-created staging directory is root-only. Install public helpers before
+# invoking them as secretary, retaining the staging directory's protection.
+install -m 644 "$DIR/tooling/codex-config.py" /opt/secretary/codex-config.py
+install -m 644 "$DIR/tooling/dsh-skills.py" /opt/secretary/dsh-skills.py
+install -m 644 "$SHARED/files/seed-web-settings" /opt/secretary/seed-web-settings.py
+install -m 644 "$SHARED/files/web-defaults.yml" /opt/secretary/web-defaults.yml
+install -m 644 "$DIR/files/dsh-secretary.yml" /opt/secretary/dsh-secretary.yml
+as_secretary /opt/nanomuse/current/.venv/bin/python /opt/secretary/codex-config.py
+as_secretary python3 /opt/secretary/dsh-skills.py /home/secretary/.nanomuse/skills /home/secretary/.agents/skills Codex
 # The common seeder preserves existing blocks verbatim, including !!js and secrets.
-as_secretary python3 "$SHARED/files/seed-web-settings" "$SHARED/files/web-defaults.yml" /home/secretary/.dsh/profiles/web/cordis.patch.yml
-as_secretary python3 "$SHARED/files/seed-web-settings" "$DIR/files/dsh-secretary.yml" /home/secretary/.dsh/profiles/web/cordis.patch.yml
+as_secretary python3 /opt/secretary/seed-web-settings.py /opt/secretary/web-defaults.yml /home/secretary/.dsh/profiles/web/cordis.patch.yml
+as_secretary python3 /opt/secretary/seed-web-settings.py /opt/secretary/dsh-secretary.yml /home/secretary/.dsh/profiles/web/cordis.patch.yml
 [ -e /home/secretary/.dsh/AGENTS.md ] || install -m 600 -o secretary -g secretary "$DIR/files/DSH_AGENTS.md" /home/secretary/.dsh/AGENTS.md
-as_secretary python3 "$DIR/tooling/dsh-skills.py" /home/secretary/.nanomuse/skills /home/secretary/.dsh/skills
+as_secretary python3 /opt/secretary/dsh-skills.py /home/secretary/.nanomuse/skills /home/secretary/.dsh/skills
 touch /home/secretary/.dsh/web.log
 chown secretary:secretary /home/secretary/.dsh/web.log
 chmod 600 /home/secretary/.dsh/web.log
