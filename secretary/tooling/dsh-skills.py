@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 
 
-def sync(source, destination):
+def sync(source, destination, runtime='DSH'):
     source, destination = Path(source), Path(destination)
     destination.mkdir(parents=True, exist_ok=True, mode=0o700)
     stamp = destination / '.secretary-managed.json'
@@ -16,8 +16,8 @@ def sync(source, destination):
     for path in sorted(source.glob('*/SKILL.md')):
         target = destination / path.parent.name / 'SKILL.md'
         text = path.read_text().replace('secretary_tools__', 'mcp__secretary_tools__')
-        text = text.replace('NanoMuseの会話モデルはOllama Cloud', 'DSHで設定した会話モデルは外部サービス')
-        text = text.replace('ツールの承認画面', 'DSHの権限設定とユーザーの指示')
+        text = text.replace('NanoMuseの会話モデルはOllama Cloud', runtime + 'で設定した会話モデルは外部サービス')
+        text = text.replace('ツールの承認画面', runtime + 'の権限設定とユーザーの指示')
         if target.exists():
             digest = hashlib.sha256(target.read_bytes()).hexdigest()
             if old.get(path.parent.name) != digest:
@@ -34,4 +34,4 @@ def sync(source, destination):
 
 
 if __name__ == '__main__':
-    print('DSH secretary skills:', sync(sys.argv[1], sys.argv[2]))
+    print('DSH secretary skills:', sync(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else 'DSH'))

@@ -34,3 +34,30 @@ class DshSkillsTests(unittest.TestCase):
                 m.sync(source, dest)
             self.assertEqual((dest / 'a/SKILL.md').read_text(), 'original')
             self.assertEqual((dest / 'z/SKILL.md').read_text(), 'custom')
+
+class CodexConfigTests(unittest.TestCase):
+    def test_keeps_native_model_auth_and_permission_settings(self):
+        spec = importlib.util.spec_from_file_location('codex_config', Path(__file__).parents[1] / 'tooling/codex-config.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as folder:
+            config = Path(folder) / 'config.toml'
+            config.write_text('model = "chosen-model"\napproval_policy = "untrusted"\ncli_auth_credentials_store = "file"\n')
+            self.assertTrue(module.configure(config))
+            import tomlkit
+            values = tomlkit.parse(config.read_text())
+            self.assertEqual(values['model'], 'chosen-model')
+            self.assertEqual(values['approval_policy'], 'untrusted')
+            self.assertEqual(values['cli_auth_credentials_store'], 'file')
+            self.assertEqual(values['mcp_servers']['secretary_tools']['command'], '/usr/bin/python3')
+            self.assertFalse(module.configure(config))
+
+    def test_conflicting_server_is_not_overwritten(self):
+        spec = importlib.util.spec_from_file_location('codex_config_conflict', Path(__file__).parents[1] / 'tooling/codex-config.py')
+        module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory() as folder:
+            config = Path(folder) / 'config.toml'
+            before = '[mcp_servers.secretary]\ncommand="custom-server"\n'
+            config.write_text(before)
+            with self.assertRaises(ValueError):
+                module.configure(config)
+            self.assertEqual(config.read_text(), before)

@@ -277,7 +277,9 @@ def doctor():
     expected = json.loads((INSTALL / 'skills-manifest.json').read_text())
     skills = Path('/home/secretary/.nanomuse/skills')
     missing = [n for n in expected if not (skills / n / 'SKILL.md').is_file()]
-    return {'tool_python': Path(PYTHON).exists(), 'plamo_python': Path(PLAMO_PYTHON).exists(),
+    return {'codex_cli': Path('/usr/local/bin/codex').exists(),
+            'codex_config': Path('/home/secretary/.codex/config.toml').exists(),
+            'tool_python': Path(PYTHON).exists(), 'plamo_python': Path(PLAMO_PYTHON).exists(),
             'ocr_python': Path('/opt/secretary-ocr/bin/python').exists(),
             'karakeep_cli': Path('/usr/local/bin/karakeep').exists(), 'credentials_configured': CONFIG.exists() and
             bool(json.loads(CONFIG.read_text()).get('karakeep', {}).get('key')),

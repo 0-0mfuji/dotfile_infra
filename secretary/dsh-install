@@ -18,6 +18,13 @@ if ! /usr/local/bin/node -e 'let [a,b]=process.versions.node.split(".").map(Numb
   (cd "$work" && grep " $archive\$" SHASUMS256.txt | sha256sum -c -)
   tar -xJf "$work/$archive" -C /usr/local --strip-components=1 --no-same-owner
 fi
+# Match the other containers: install once, preserve an existing CLI version.
+if [ ! -x /usr/local/bin/codex ]; then
+  /usr/local/bin/npm install --global @openai/codex@latest
+fi
+install -d -m 700 -o secretary -g secretary /home/secretary/.codex /home/secretary/.agents /home/secretary/.agents/skills
+install -m 755 "$DIR/files/secretary-codex" /usr/local/bin/secretary-codex
+[ -e /home/secretary/.codex/AGENTS.md ] || install -m 600 -o secretary -g secretary "$SHARED/files/AGENTS.md" /home/secretary/.codex/AGENTS.md
 /usr/local/bin/corepack enable
 install -d -m 700 -o secretary -g secretary /home/secretary/src /home/secretary/.dsh /home/secretary/.dsh/skills
 source_dir=/home/secretary/src/deepseek-harness
@@ -46,6 +53,13 @@ install -d -m 755 /usr/local/lib/dev-dsh/bin
 install -m 755 "$SHARED/files/dsh-bwrap" /usr/local/lib/dev-dsh/bin/bwrap
 install -m 755 "$DIR/files/secretary-dsh" /usr/local/bin/secretary-dsh
 as_secretary /usr/local/bin/secretary-dsh --profile web --dump-config >/dev/null
+# Same checkout-local plugin and native payload as the other dev containers.
+profile=/home/secretary/.dsh/profiles/web/package.json
+if ! grep -q '"@deepseek-ai/dsh-subagent-codex"' "$profile" 2>/dev/null; then
+  as_secretary /usr/local/bin/secretary-dsh plugin --profile web add "link:$source_dir/packages/subagent/subagent-codex"
+fi
+as_secretary /opt/nanomuse/current/.venv/bin/python "$DIR/tooling/codex-config.py"
+as_secretary python3 "$DIR/tooling/dsh-skills.py" /home/secretary/.nanomuse/skills /home/secretary/.agents/skills Codex
 # The common seeder preserves existing blocks verbatim, including !!js and secrets.
 as_secretary python3 "$SHARED/files/seed-web-settings" "$SHARED/files/web-defaults.yml" /home/secretary/.dsh/profiles/web/cordis.patch.yml
 as_secretary python3 "$SHARED/files/seed-web-settings" "$DIR/files/dsh-secretary.yml" /home/secretary/.dsh/profiles/web/cordis.patch.yml

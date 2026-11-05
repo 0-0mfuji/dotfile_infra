@@ -156,4 +156,4 @@ Macデータの手動転送、適用・検証手順は
 DSHも同じ秘書ユーザーへ導入し、Macでは `dev secretary dsh` で開く。
 `secretary.nesting = true` はDSHのbubblewrap実行に必要。
 129スキルと専用MCPを共有し、モデル認証・会話履歴はNanoMuseと分けて管理する。
-Codex CLIやDSHのCodex委譲プラグインはこの導入には含めない。
+Codex CLIとDSHのCodex委譲プラグインも導入する。初回ログインは `dev secretary setup codex`。

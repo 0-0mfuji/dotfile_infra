@@ -21,7 +21,7 @@ trap cleanup EXIT
 systemctl stop "${units[@]}" secretary-timetree.service
 # NanoMuseのデータと旧Hermesの退避データも暗号化して保存する。
 extra=()
-for path in /home/secretary/.dsh /srv/secretary/karakeep-tool /home/secretary/.nanomuse /srv/secretary/nanomuse-workspace /etc/secretary-notes.env /var/backups/secretary/retired-hermes-*; do
+for path in /home/secretary/.codex /home/secretary/.agents /home/secretary/.dsh /srv/secretary/karakeep-tool /home/secretary/.nanomuse /srv/secretary/nanomuse-workspace /etc/secretary-notes.env /var/backups/secretary/retired-hermes-*; do
   [ ! -e "$path" ] || extra+=("${path#/}")
 done
 tar -C / --exclude=home/secretary/.cache \
