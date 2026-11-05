@@ -34,7 +34,14 @@ mobile_port() {  # $1=instance -> ポート (無ければ空)
 for i in "${instances[@]}"; do
   echo "==> $i"
   if [ "$i" = secretary-dev ]; then
-    if [ "$gpu_sandbox" = 1 ]; then echo "no DeepSeek Harness in secretary-dev; skipping"; continue; fi
+    if [ "$gpu_sandbox" = 1 ]; then
+      staging="$(incus exec "$i" -- mktemp -d /tmp/secretary-gpu.XXXXXXXX)"
+      incus file push "$DIR/files/dsh-bwrap" "$i$staging/dsh-bwrap"
+      incus exec "$i" -- install -D -m 755 "$staging/dsh-bwrap" /usr/local/lib/dev-dsh/bin/bwrap
+      incus exec "$i" -- rm -rf "$staging"
+      incus exec "$i" -- systemctl try-restart dsh-web.service
+      continue
+    fi
     "$DIR/../secretary/provision" "$i"
     continue
   fi

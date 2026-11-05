@@ -62,6 +62,7 @@ chmod 440 /etc/sudoers.d/secretary-operator
 systemctl daemon-reload
 bash "$DIR/retire-hermes"
 bash "$DIR/nanomuse-install"
+bash "$DIR/dsh-install"
 # SilverBulletはログイン設定後にのみ起動する。
 if [ -s /etc/secretary-notes.env ]; then systemctl enable secretary-notes; systemctl restart secretary-notes; fi
 echo '導入完了。Macで dev secretary を実行してください。'

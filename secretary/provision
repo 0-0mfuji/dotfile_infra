@@ -19,6 +19,7 @@ git -C "$work/source" bundle create "$work/karakeep.bundle" refs/heads/secretary
 staging="$(incus exec "$instance" -- mktemp -d /tmp/secretary.XXXXXXXX)"
 trap 'incus exec "$instance" -- rm -rf "$staging"; rm -rf "$work"' EXIT
 incus file push -r "$DIR" "$instance$staging/"
+incus file push -r "$DIR/../provision" "$instance$staging/"
 incus file push "$work/karakeep.bundle" "$instance$staging/secretary/karakeep.bundle"
 incus exec "$instance" -- bash "$staging/secretary/install"
 

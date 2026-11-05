@@ -7,6 +7,7 @@ variable "secretary" {
     memory        = optional(string, "16GiB")
     disk_size     = optional(string, "120GiB")
     gpu           = optional(bool, true)
+    nesting       = optional(bool, true)
     notes_port    = optional(number)
     nanomuse_port = optional(number)
   })
@@ -23,7 +24,7 @@ resource "incus_instance" "secretary" {
     "limits.cpu"          = tostring(each.value.cpu)
     "limits.memory"       = each.value.memory
     "security.privileged" = "false"
-    "security.nesting"    = "false"
+    "security.nesting"    = tostring(each.value.nesting)
     "cloud-init.user-data" = templatefile("${path.module}/cloud-init/dev-base.yaml.tftpl", {
       ssh_public_key = var.ssh_public_key
       packages       = ["openssh-server", "ca-certificates", "curl", "git", "unzip", "python3", "python3-yaml"]

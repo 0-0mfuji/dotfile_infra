@@ -545,7 +545,7 @@ def readiness():
 
 def doctor(check=False):
     print('文書フォルダ:', 'OK' if DOCS.is_dir() else '未導入')
-    for unit in ('secretary-nanomuse', 'secretary-notes', 'secretary-timetree.timer'):
+    for unit in ('secretary-nanomuse', 'dsh-web', 'secretary-notes', 'secretary-timetree.timer'):
         state = subprocess.run(['systemctl', 'is-active', unit], capture_output=True, text=True).stdout.strip()
         print(unit + ':', state or 'unknown')
     cfg = read_json(ROOT / 'connections.json')
