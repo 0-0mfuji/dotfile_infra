@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[ "$(id -u)" -eq 0 ] || exit 1
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+id secretary-karakeep >/dev/null 2>&1 || useradd --system --user-group --home-dir /var/lib/secretary-karakeep --shell /usr/sbin/nologin secretary-karakeep
+broker_gid="$(getent group secretary-karakeep | cut -d: -f3)"
+if [[ " $(id -G secretary) " == *" $broker_gid "* ]]; then
+  echo 'secretary must not belong to the credential-holding secretary-karakeep group'; exit 1
+fi
+install -d -m 700 -o secretary-karakeep -g secretary-karakeep /var/lib/secretary-karakeep /var/lib/secretary-karakeep/plans
+install -m 644 "$DIR/files/karakeep-gateway.py" /opt/secretary/
+install -m 755 "$DIR/files/secretary-karakeep" /usr/local/bin/secretary-karakeep
+install -m 644 "$DIR/files/secretary-karakeep.service" /etc/systemd/system/
+# Stop old AI processes before moving a write-capable key out of their account.
+for unit in secretary-nanomuse.service dsh-web.service; do
+  if systemctl is-active --quiet "$unit"; then systemctl stop "$unit"; fi
+done
+# Preserve credentials only in an operator-private backup, never in the AI's tree.
+install -d -m 700 /var/backups/secretary
+backup="$(mktemp -d /var/backups/secretary/karakeep-scope-XXXXXXXX)"
+for path in /home/secretary/.config/secretary/connections.json /srv/secretary/karakeep-tool/.env /etc/secretary-karakeep.json; do
+  if [ -f "$path" ] && [ ! -L "$path" ]; then cp "$path" "$backup/$(basename "$path")"; fi
+done
+chmod -R go-rwx "$backup"
+/usr/bin/python3 /opt/secretary/karakeep-gateway.py migrate
+chgrp secretary-karakeep /etc/secretary-karakeep.json
+chmod 640 /etc/secretary-karakeep.json
+systemctl daemon-reload
+systemctl enable secretary-karakeep.service
+systemctl restart secretary-karakeep.service

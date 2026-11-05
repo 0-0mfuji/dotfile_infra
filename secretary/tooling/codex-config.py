@@ -23,6 +23,9 @@ def configure(path):
                 raise ValueError('Existing Codex MCP definition preserved; reconcile: ' + name)
         else:
             servers[name] = settings
+    disabled = servers['secretary_tools'].setdefault('disabled_tools', [])
+    if 'karakeep_write' not in disabled:
+        disabled.append('karakeep_write')
     after = tomlkit.dumps(doc)
     if before == after:
         return False

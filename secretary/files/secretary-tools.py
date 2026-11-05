@@ -14,6 +14,8 @@ import sys
 import tempfile
 import time
 import uuid
+import urllib.request
+import urllib.error
 
 INSTALL = Path('/opt/secretary')
 REPO = Path('/srv/secretary/karakeep-tool')
@@ -41,9 +43,27 @@ def within(root, name, existing=False):
 def read_credentials():
     cfg = json.loads(CONFIG.read_text()) if CONFIG.exists() else {}
     item = cfg.get('karakeep', {})
-    if not item.get('url') or not item.get('key'):
-        raise ValueError('Karakeep not configured: dev secretary setup karakeep')
+    if not item.get('url') or not item.get('key') or not item.get('managed_proxy') or item['url'] != 'http://127.0.0.1:8766':
+        raise ValueError('Karakeep scoped gateway not configured: run provision and dev secretary setup karakeep')
     return item
+
+
+def gateway_request(method, path, data=None):
+    cfg = read_credentials()
+    body = json.dumps(data).encode() if data is not None else None
+    request = urllib.request.Request(cfg['url'] + path, data=body, method=method,
+                                    headers={'Authorization': 'Bearer ' + cfg['key'], 'Content-Type': 'application/json'})
+    try:
+        with urllib.request.urlopen(request, timeout=90) as response:
+            return json.load(response)
+    except urllib.error.HTTPError as error:
+        try:
+            message = json.loads(error.read(16000)).get('error', 'request rejected')
+        except Exception:
+            message = 'request rejected'
+        raise ValueError('Karakeep gateway: ' + redact(str(message))[:1000]) from None
+    except Exception as error:
+        raise ValueError('Karakeep gateway request failed: ' + type(error).__name__) from None
 
 
 def child_env():
@@ -53,6 +73,8 @@ def child_env():
            'NODE_PATH': '/opt/secretary-node/node_modules', 'CHROME_PATH': '/usr/bin/chromium'}
     if CONFIG.exists():
         item = json.loads(CONFIG.read_text()).get('karakeep', {})
+        if item and not item.get('managed_proxy'):
+            raise ValueError('Raw Karakeep keys cannot be passed to tools; run provision first')
         env.update(KARAKEEP_SERVER_ADDR=item.get('url', ''), KARAKEEP_API_KEY=item.get('key', ''))
     secrets = CONFIG.parent / 'tool-secrets.json'
     if secrets.exists():
@@ -105,6 +127,17 @@ def tool_entry(path):
     return entry, target
 
 
+def check_legacy_access(path, args):
+    """Fail explicitly rather than letting a CLI swallow a rejected raw mutation."""
+    validate_args(args)
+    if args == ['--help']:
+        return
+    if path in ('tools/karakeep/sync_nas_pdfs_to_karakeep.py', 'tools/karakeep/recrawl/recrawl.sh') and '--dry-run' not in args:
+        raise ValueError('This legacy write batch is restricted to --dry-run; use scoped plans for supported changes')
+    if path == 'tools/karakeep/recrawl/manage_list.sh' and (not args or args[0] not in ('status', 'show-list')):
+        raise ValueError('Legacy list mutations are disabled; an operator-reviewed plan implementation is required')
+
+
 def start_job(kind, payload):
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     job = uuid.uuid4().hex
@@ -151,6 +184,7 @@ def worker(job):
             timeout = 1800
         else:
             entry, target = tool_entry(request['path'])
+            check_legacy_access(request['path'], request.get('args', []))
             if target.name in ('run_extra.sh', 'run_mirror2.sh') or (target.name == 'finalize.py' and 'place' in request.get('args', [])):
                 raise ValueError('Mac-specific paths require a reviewed portability change first; see inspect')
             if target.suffix == '.swift':
@@ -189,7 +223,20 @@ def specs():
         ('run', '固定版Karakeep-toolをジョブとして実行。外部変更や上書きの対象を確認して使う。', {'path': string, 'args': args}, ['path']),
         ('job_status', '実行ジョブの完了状態とログ末尾を確認。失敗を成功と報告しない。', {'job_id': string}, ['job_id']),
         ('karakeep_read', 'Karakeep CLIの固定された読み取り操作。認証情報はサービスが渡す。', {'args': args}, ['args']),
-        ('karakeep_write', 'Karakeep CLIで明示された登録・更新・削除を実行。対象範囲を示す。', {'args': args}, ['args']),
+        ('karakeep_create', 'KarakeepへURLまたはノートを1件登録。既存記事は変更・削除しない。',
+         {'url': string, 'note': string}, []),
+        ('karakeep_tags', '指定した1件の記事のタグだけを追加・除去。記事本体の削除はできない。',
+         {'bookmark_id': string, 'add': args, 'remove': args}, ['bookmark_id']),
+        ('karakeep_delete_plan', '削除する記事IDを固定した計画を作る。削除は実行しない。返るコマンドで管理者が対象と件数を確認する。',
+         {'bookmark_ids': {'type': 'array', 'items': string, 'minItems': 1, 'maxItems': 100}}, ['bookmark_ids']),
+        ('karakeep_batch_plan', '登録・タグ整理・更新・削除の一括計画だけを作る。1..100操作を固定し、管理者確認後に一度だけ実行。',
+         {'actions': {'type': 'array', 'minItems': 1, 'maxItems': 100, 'items': {'type': 'object',
+           'properties': {'operation': {'type': 'string', 'enum': ['create', 'tags', 'update', 'delete']},
+                          'bookmark_id': string, 'url': string, 'note': string, 'title': string,
+                          'add': args, 'remove': args, 'archived': {'type': 'boolean'}, 'favourited': {'type': 'boolean'}},
+           'required': ['operation'], 'additionalProperties': False}}}, ['actions']),
+        ('karakeep_plan_status', '確認計画の固定された対象、件数、完了・部分失敗の状態を読む。実行しない。',
+         {'plan_id': string}, ['plan_id']),
         ('dictionary', '英辞郎・dict.cc・WaDoku原本を新しい専用フォルダへ変換。元ファイルと既存辞書を上書きしない。',
          {'kind': {'type': 'string', 'enum': ['eijiro', 'dictcc', 'wadoku']}, 'input_file': string,
           'swap': {'type': 'boolean'}}, ['kind', 'input_file']),
@@ -205,6 +252,24 @@ def specs():
 
 
 def invoke(name, args):
+    if name == 'karakeep_write':
+        raise ValueError('karakeep_write is retired; use create/tags or an operator-confirmed plan')
+    if name == 'karakeep_create':
+        return gateway_request('POST', '/actions/create', args)
+    if name == 'karakeep_tags':
+        return gateway_request('POST', '/actions/tags', args)
+    if name == 'karakeep_delete_plan':
+        ids = args['bookmark_ids']
+        if not isinstance(ids, list) or not ids or len(ids) > 100 or len(ids) != len(set(ids)):
+            raise ValueError('provide 1..100 unique bookmark ids')
+        return gateway_request('POST', '/plans', {'actions': [{'operation': 'delete', 'bookmark_id': x} for x in ids]})
+    if name == 'karakeep_batch_plan':
+        return gateway_request('POST', '/plans', args)
+    if name == 'karakeep_plan_status':
+        plan_id = args['plan_id']
+        if not isinstance(plan_id, str) or not re.fullmatch('[a-f0-9]{32}', plan_id):
+            raise ValueError('invalid plan id')
+        return gateway_request('GET', '/plans/' + plan_id)
     if name == 'catalog':
         return catalog()
     if name == 'inspect':
@@ -212,7 +277,7 @@ def invoke(name, args):
         return {**entry, 'source': target.read_text()[:45000], 'source_truncated': target.stat().st_size > 45000}
     if name == 'run':
         tool_entry(args['path'])
-        validate_args(args.get('args', []))
+        check_legacy_access(args['path'], args.get('args', []))
         return start_job('tool', args)
     if name == 'job_status':
         folder = job_folder(args['job_id'])
@@ -228,11 +293,11 @@ def invoke(name, args):
                 stream.seek(max(0, log.stat().st_size - 6000))
                 value['log_tail'] = redact(stream.read().decode('utf-8', errors='replace'))
         return value
-    if name in ('karakeep_read', 'karakeep_write'):
+    if name == 'karakeep_read':
         argv = validate_args(args['args'])
         if not argv or any(x.startswith(('--api-key', '--server-addr', '--config')) for x in argv):
             raise ValueError('credentials and destination flags are supplied by the service')
-        if name == 'karakeep_read' and not (argv == ['whoami'] or len(argv) >= 2 and tuple(argv[:2]) in {
+        if not (argv == ['whoami'] or len(argv) >= 2 and tuple(argv[:2]) in {
             ('bookmarks', 'list'), ('bookmarks', 'search'), ('bookmarks', 'get'), ('lists', 'list'), ('lists', 'get')
         }):
             raise ValueError('not an approved read command')
@@ -281,7 +346,9 @@ def doctor():
             'codex_config': Path('/home/secretary/.codex/config.toml').exists(),
             'tool_python': Path(PYTHON).exists(), 'plamo_python': Path(PLAMO_PYTHON).exists(),
             'ocr_python': Path('/opt/secretary-ocr/bin/python').exists(),
-            'karakeep_cli': Path('/usr/local/bin/karakeep').exists(), 'credentials_configured': CONFIG.exists() and
+            'karakeep_cli': Path('/usr/local/bin/karakeep').exists(),
+            'karakeep_scoped_connection': CONFIG.exists() and bool(json.loads(CONFIG.read_text()).get('karakeep', {}).get('managed_proxy')),
+            'credentials_configured': CONFIG.exists() and
             bool(json.loads(CONFIG.read_text()).get('karakeep', {}).get('key')),
             'catalog_entries': len(catalog()['tools']), 'missing_skills': missing,
             'gpu_devices': [str(p) for p in Path('/dev').glob('nvidia[0-9]*')],
@@ -308,7 +375,10 @@ def mcp():
                 result = {'tools': specs()}
             elif method == 'tools/call':
                 params = message['params']
-                spec = next(x for x in specs() if x['name'] == params['name'])['inputSchema']
+                found = next((x for x in specs() if x['name'] == params['name']), None)
+                if found is None:
+                    raise ValueError('Unknown or retired tool; karakeep_write is no longer available')
+                spec = found['inputSchema']
                 args = params.get('arguments', {})
                 if not isinstance(args, dict) or set(args) - set(spec['properties']) or any(k not in args for k in spec['required']):
                     raise ValueError('invalid arguments')

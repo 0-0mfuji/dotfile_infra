@@ -7,7 +7,7 @@ recipient="${1:?usage: sudo /opt/secretary/backup <age-recipient>}"
 command -v age >/dev/null
 install -d -m 700 /var/backups/secretary
 out="$(mktemp /var/backups/secretary/backup-XXXXXXXX.age)"
-units=(dsh-web.service secretary-nanomuse.service secretary-notes.service secretary-timetree.timer)
+units=(secretary-karakeep.service dsh-web.service secretary-nanomuse.service secretary-notes.service secretary-timetree.timer)
 active=()
 for unit in "${units[@]}"; do
   if systemctl is-active --quiet "$unit"; then active+=("$unit"); fi
@@ -21,7 +21,7 @@ trap cleanup EXIT
 systemctl stop "${units[@]}" secretary-timetree.service
 # NanoMuseのデータと旧Hermesの退避データも暗号化して保存する。
 extra=()
-for path in /home/secretary/.codex /home/secretary/.agents /home/secretary/.dsh /srv/secretary/karakeep-tool /home/secretary/.nanomuse /srv/secretary/nanomuse-workspace /etc/secretary-notes.env /var/backups/secretary/retired-hermes-*; do
+for path in /etc/secretary-karakeep.json /var/lib/secretary-karakeep /home/secretary/.codex /home/secretary/.agents /home/secretary/.dsh /srv/secretary/karakeep-tool /home/secretary/.nanomuse /srv/secretary/nanomuse-workspace /etc/secretary-notes.env /var/backups/secretary/retired-hermes-*; do
   [ ! -e "$path" ] || extra+=("${path#/}")
 done
 tar -C / --exclude=home/secretary/.cache \

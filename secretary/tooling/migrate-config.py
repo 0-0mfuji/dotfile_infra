@@ -45,7 +45,14 @@ def migrate(path, backups):
     # A fixed CLI against the configured user's own Karakeep; callers cannot select
     # another endpoint. Egress is mediated here, not arbitrary subprocess networking.
     policies['karakeep_read'] = {'risk': 'moderate', 'egress': False}
-    policies['karakeep_write'] = {'risk': 'sensitive', 'egress': False}
+    policies.pop('karakeep_write', None)
+    denied = sentinel.setdefault('deny_tools', [])
+    if 'secretary_tools__karakeep_write' not in denied:
+        denied.append('secretary_tools__karakeep_write')
+    for name in ('karakeep_create', 'karakeep_tags'):
+        policies[name] = {'risk': 'sensitive', 'egress': False}
+    for name in ('karakeep_delete_plan', 'karakeep_batch_plan', 'karakeep_plan_status'):
+        policies[name] = {'risk': 'moderate', 'egress': False}
     policies['run'] = {'risk': 'sensitive', 'egress': True}
     rendered = tomlkit.dumps(doc)
     if rendered == text:
@@ -67,6 +74,36 @@ def migrate(path, backups):
     return True
 
 
+def revoke_legacy_grants(path, backups):
+    path = Path(path)
+    if not path.exists():
+        return False
+    value = json.loads(path.read_text())
+    if isinstance(value, list) and all(isinstance(g, str) for g in value):
+        filtered = [g for g in value if g != 'secretary_tools__karakeep_write']
+        if filtered == value:
+            return False
+    elif isinstance(value, dict) and isinstance(value.get('grants'), list) and all(isinstance(g, dict) for g in value['grants']):
+        grants = [g for g in value['grants'] if (g.get('tool') or str(g.get('key', '')).split(':', 1)[0]) != 'secretary_tools__karakeep_write']
+        if grants == value['grants']:
+            return False
+        filtered = {**value, 'grants': grants}
+    else:
+        raise ValueError('Unsupported approval store; review retired karakeep_write grants manually')
+    backups = Path(backups); backups.mkdir(parents=True, exist_ok=True, mode=0o700)
+    folder = Path(tempfile.mkdtemp(prefix='retired-write-grants-', dir=backups))
+    shutil.copy2(path, folder / path.name)
+    metadata = path.stat()
+    fd, temporary = tempfile.mkstemp(dir=path.parent)
+    with os.fdopen(fd, 'w') as output:
+        json.dump(filtered, output, ensure_ascii=False, indent=2)
+    os.chown(temporary, metadata.st_uid, metadata.st_gid)
+    os.chmod(temporary, 0o600)
+    os.replace(temporary, path)
+    return True
+
+
 if __name__ == '__main__':
+    revoke_legacy_grants('/home/secretary/.nanomuse/approvals.json', '/var/backups/secretary')
     changed = migrate('/home/secretary/.nanomuse/config.toml', '/var/backups/secretary')
     print('NanoMuse tools configuration:', 'updated (backup saved)' if changed else 'unchanged')

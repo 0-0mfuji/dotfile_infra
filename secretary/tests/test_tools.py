@@ -64,7 +64,10 @@ command = "unchanged"
             self.assertEqual(policies['translate']['risk'], 'moderate')
             self.assertFalse(policies['translate']['egress'])
             self.assertEqual(policies['run']['risk'], 'sensitive')
-            self.assertEqual(policies['karakeep_write']['risk'], 'sensitive')
+            self.assertNotIn('karakeep_write', policies)
+            self.assertEqual(policies['karakeep_create']['risk'], 'sensitive')
+            self.assertEqual(policies['karakeep_tags']['risk'], 'sensitive')
+            self.assertIn('secretary_tools__karakeep_write', parsed['sentinel']['deny_tools'])
 
 
 class ToolBoundaryTests(unittest.TestCase):

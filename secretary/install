@@ -57,10 +57,12 @@ done
 # devは管理用。AIが動くsecretaryユーザーにはsudo権限を付けない。
 cat > /etc/sudoers.d/secretary-operator <<'SUDO'
 dev ALL=(secretary) NOPASSWD: /usr/local/bin/secretary *
+dev ALL=(root) NOPASSWD: /usr/local/bin/secretary-karakeep *
 SUDO
 chmod 440 /etc/sudoers.d/secretary-operator
 systemctl daemon-reload
 bash "$DIR/retire-hermes"
+bash "$DIR/karakeep-install"
 bash "$DIR/nanomuse-install"
 bash "$DIR/dsh-install"
 # SilverBulletはログイン設定後にのみ起動する。

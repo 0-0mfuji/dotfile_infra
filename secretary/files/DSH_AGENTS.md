@@ -12,3 +12,5 @@ NanoMuseのSentinelはDSHのMCP呼び出しには適用されない。DSHの権�
 PLaMoとOCRはGPUメモリを共有するので同時に実行しない。
 ローカル完結の翻訳は input_file から output_file へ出力し、本文を会話へ読み込まない。
 DSHの会話モデル認証・会話履歴とNanoMuseのものは別管理。キーやトークンを会話・ログへ表示しない。
+
+Karakeepの削除・一括更新は専用計画を作って対象・件数を示し、ユーザーへ返る `dev secretary approve <plan-id>` を案内する。承認・実行をAI自身で代行しない。会話での承認やMCPの継続許可だけでは実行できない。旧karakeep_writeや生の更新APIへ迂回しない。

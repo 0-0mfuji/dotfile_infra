@@ -191,6 +191,9 @@ def validate_api_key(kind, key):
 
 
 def api_config(kind):
+    if kind == 'karakeep':
+        print('Macで実行: dev secretary setup karakeep（管理者側へAPIキーを保存します）')
+        return
     cfg = read_json(ROOT / 'connections.json')
     defaults = read_json(ROOT / 'connection-defaults.json').get(kind, {})
     current = {**defaults, **cfg.get(kind, {})}
@@ -594,7 +597,7 @@ def readiness():
 
 def doctor(check=False):
     print('文書フォルダ:', 'OK' if DOCS.is_dir() else '未導入')
-    for unit in ('secretary-nanomuse', 'dsh-web', 'secretary-notes', 'secretary-timetree.timer'):
+    for unit in ('secretary-nanomuse', 'dsh-web', 'secretary-karakeep', 'secretary-notes', 'secretary-timetree.timer'):
         state = subprocess.run(['systemctl', 'is-active', unit], capture_output=True, text=True).stdout.strip()
         print(unit + ':', state or 'unknown')
     for key, state, label in coding_readiness():

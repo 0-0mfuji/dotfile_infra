@@ -157,3 +157,8 @@ DSHも同じ秘書ユーザーへ導入し、Macでは `dev secretary dsh` で�
 `secretary.nesting = true` はDSHのbubblewrap実行に必要。
 129スキルと専用MCPを共有し、モデル認証・会話履歴はNanoMuseと分けて管理する。
 Codex CLIとDSHのCodex委譲プラグインも導入する。初回ログインは `dev secretary setup codex`。
+
+Karakeepの更新操作を分離した。削除・一括更新は対象固定の計画を作り、
+`dev secretary approve <plan-id>` で管理者が一度だけ実行する。
+実APIキーは別サービスユーザーのgatewayへ移し、汎用スクリプトには削除不能な接続を渡す。
+旧NAS同期・再クロール等の生API書込はdry-run/参照に限定する。

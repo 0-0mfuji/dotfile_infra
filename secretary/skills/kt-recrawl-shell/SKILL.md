@@ -5,6 +5,8 @@ description: "失敗したTwitterブックマークを再クロールする。Ka
 
 # 失敗したTwitterブックマークを再クロールする
 
+Karakeep接続は制限付きgatewayを使う。参照・dry-runは継続できるが、このスクリプトの生API/CLIによる更新・削除は拒否される。記事登録は `secretary_tools__karakeep_create`、タグ整理は `secretary_tools__karakeep_tags`、削除・一括更新は専用計画ツールを使い、返る管理者確認コマンドをユーザーへ示す。NASアップロード・再クロール・リスト同期のような未対応の書込バッチを、直接実行できると案内しない。検証済み計画経路を実装するまでdry-run/参照にとどめる。
+
 対象は `tools/karakeep/recrawl/recrawl.sh`。ソースは固定コミットの `/srv/secretary/karakeep-tool` にある。
 
 1. `secretary_tools__inspect` に `path="tools/karakeep/recrawl/recrawl.sh"` を渡し、最新の導入状態、ソース、引数、必要データを確認する。`--help` を実行するだけで処理が走るツールもあるので、最初はソースを読む。

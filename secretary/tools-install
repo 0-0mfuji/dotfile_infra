@@ -103,23 +103,11 @@ pathlib.Path('/opt/secretary/skills-manifest.json').write_text(json.dumps(manife
 PY
 install -m 644 "$DIR/tooling/migrate-config.py" /opt/secretary/migrate-tools-config.py
 /opt/nanomuse/current/.venv/bin/python /opt/secretary/migrate-tools-config.py
-# Python tools load a root .env; shell tools also source it. Generate only validated
-# connection values, never copy a Mac shell configuration or model API keys.
-python3 - "$repo" <<'PY'
-import json, pathlib, re
-repo=pathlib.Path(__import__('sys').argv[1]); cfg=pathlib.Path('/home/secretary/.config/secretary/connections.json')
-item=json.loads(cfg.read_text()).get('karakeep',{}) if cfg.exists() else {}
-if item.get('url') and item.get('key'):
-    if not re.fullmatch(r'https?://[A-Za-z0-9._:/%-]+',item['url']) or not re.fullmatch(r'[A-Za-z0-9._~-]+',item['key']):
-        raise SystemExit('Karakeep connection cannot be safely represented in .env; configure a connector adapter')
-    path=repo/'.env'
-    marker='# managed by secretary/tools-install\n'
-    if path.is_symlink() or path.exists() and not path.read_text().startswith(marker):
-        raise SystemExit('Existing unmanaged Karakeep .env requires reconciliation; it was not overwritten')
-    path.write_text(marker+'URL='+item['url']+'\nAPI_KEY='+item['key']+'\n')
-    import os,pwd
-    os.chmod(path,0o600); os.chown(path,pwd.getpwnam('secretary').pw_uid,pwd.getpwnam('secretary').pw_gid)
-PY
+# Generate only the gateway token, using anchored no-symlink file operations.
+# Never read arbitrary AI-selected paths with root privileges.
+/usr/bin/python3 /opt/secretary/karakeep-gateway.py migrate
+chgrp secretary-karakeep /etc/secretary-karakeep.json
+chmod 640 /etc/secretary-karakeep.json
 # Fix only common font paths using Linux-owned symlinks; do not modify checked-out code.
 install -d /System/Library/Fonts
 for name in 'ヒラギノ角ゴシック W6.ttc' 'ヒラギノ角ゴシック W3.ttc' 'ヒラギノ明朝 ProN.ttc' 'Hiragino Sans GB.ttc' 'PingFang.ttc'; do
