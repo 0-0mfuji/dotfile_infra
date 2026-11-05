@@ -64,6 +64,7 @@ done
 # Legacy utilities also write reports beside their source. Allow directory entries,
 # retain file ownership, and refuse any modified tracked source on the next deploy.
 find "$repo" -type d -not -path "$repo/.git*" -exec chown secretary:secretary {} +
+chown -R secretary:secretary "$repo/.git"
 install -d -m 700 -o secretary -g secretary /home/secretary/.config/secretary/tool-jobs
 install -d -m 755 /var/lib/secretary-models
 install -d -m 700 -o secretary -g secretary /var/lib/secretary-models/cache /var/lib/secretary-models/numba
