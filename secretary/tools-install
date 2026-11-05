@@ -14,8 +14,22 @@ p=Path('/etc/apt/sources.list.d/debian.sources')
 lines=p.read_text().splitlines()
 p.write_text('\n'.join(line+' non-free' if line.startswith('Components:') and 'non-free' not in line.split() else line for line in lines)+'\n')
 PYAPT
+elif [ -f /etc/apt/sources.list ]; then
+  python3 - <<'PYAPT'
+from pathlib import Path
+p=Path('/etc/apt/sources.list')
+lines=[]
+for line in p.read_text().splitlines():
+    fields=line.split()
+    if fields and fields[0] in ('deb', 'deb-src') and any(
+        host in line for host in ('deb.debian.org/', 'security.debian.org/')
+    ) and 'non-free' not in fields:
+        line=line.replace(' main', ' main non-free', 1)
+    lines.append(line)
+p.write_text('\n'.join(lines)+'\n')
+PYAPT
 else
-  echo 'Expected Debian deb822 sources; enable non-free before provisioning'; exit 1
+  echo 'Debian APT sources missing; enable non-free before provisioning'; exit 1
 fi
 apt-get update
 install -d -m 700 /var/backups/secretary
