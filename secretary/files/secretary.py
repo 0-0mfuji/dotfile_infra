@@ -508,6 +508,53 @@ def timetree_sync():
         raise
 
 
+def coding_readiness(home=None, binaries=None):
+    """Return fixed states only; never return native CLI output or credential values."""
+    home = Path.home() if home is None else Path(home)
+    binaries = Path('/usr/local/bin') if binaries is None else Path(binaries)
+    codex = binaries / 'secretary-codex'
+    codex_state = 'missing'
+    if codex.is_file():
+        try:
+            result = subprocess.run([str(codex), 'login', 'status'], stdin=subprocess.DEVNULL,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+            codex_state = 'ready' if result.returncode == 0 else 'pending' if result.returncode == 1 else 'unknown'
+        except (OSError, subprocess.TimeoutExpired):
+            codex_state = 'unknown'
+    dsh_state = 'missing'
+    if (binaries / 'secretary-dsh').is_file():
+        dsh_state = 'pending'
+        try:
+            import yaml
+            patch = home / '.dsh/profiles/web/cordis.patch.yml'
+            entries = yaml.safe_load(patch.read_text()) if patch.exists() else []
+            # Do not evaluate !!js expressions or guess whether a custom provider has auth.
+            if not isinstance(entries, list):
+                raise ValueError('custom DSH profile')
+            default = next((x.get('config', {}) for x in entries if isinstance(x, dict) and x.get('id') == 'agent-default-model'), {})
+            provider = default.get('provider')
+            model = default.get('model')
+            if provider and model:
+                credentials = home / '.dsh/.credentials.yaml'
+                data = yaml.safe_load(credentials.read_text()) if credentials.exists() else {}
+                if data and (not isinstance(data, dict) or data.get('version') != 1):
+                    raise ValueError('unsupported DSH credential layout')
+                record = (data or {}).get('records', {}).get('llm-pi-ai/' + provider, {})
+                if record.get('kind') == 'api-key' and (record.get('key') or record.get('env')):
+                    dsh_state = 'ready'
+                elif record.get('kind') == 'grant' and record.get('payload'):
+                    dsh_state = 'ready'
+                else:
+                    provider_config = next((x.get('config', {}) for x in entries if isinstance(x, dict) and x.get('id') == 'llm-pi-ai'), {})
+                    config = provider_config.get('providers', {}).get(provider, {})
+                    env_name = config.get('apiKeyEnv')
+                    if isinstance(env_name, str) and os.environ.get(env_name):
+                        dsh_state = 'ready'
+        except Exception:
+            dsh_state = 'unknown'
+    return [('codex', codex_state, 'Codex'), ('dsh-model', dsh_state, 'DSHモデル認証')]
+
+
 def readiness():
     """Report configuration presence only; no credentials or external calls."""
     nano_ready = False
@@ -541,6 +588,8 @@ def readiness():
     statuses.append(('timetree', bool(snapshot.get('fetched_at')) and not tt_status.get('error'), 'TimeTree共有予定（キャッシュ取得済みか）'))
     for key, configured, label in statuses:
         print(key + '\t' + ('ready' if configured else 'pending') + '\t' + label)
+    for key, state, label in coding_readiness():
+        print(key + '\t' + state + '\t' + label)
 
 
 def doctor(check=False):
@@ -548,6 +597,8 @@ def doctor(check=False):
     for unit in ('secretary-nanomuse', 'dsh-web', 'secretary-notes', 'secretary-timetree.timer'):
         state = subprocess.run(['systemctl', 'is-active', unit], capture_output=True, text=True).stdout.strip()
         print(unit + ':', state or 'unknown')
+    for key, state, label in coding_readiness():
+        print(label + ':', state, '(DSHは保存状態のみ、接続未確認)' if key == 'dsh-model' else '')
     cfg = read_json(ROOT / 'connections.json')
     failures = 0
     for name in ('gmail', 'outlook', 'plane', 'karakeep'):
