@@ -1,0 +1,1984 @@
+{
+  "repository": "git@github.com:0-0mfuji/Karakeep-tool.git",
+  "commit": "e4f7e40a2df76e6d41557ba0c06c9c7f80b8a4ec",
+  "tools": [
+    {
+      "path": "books/aozora_to_epub.py",
+      "name": "kt-aozora-to-epub",
+      "description": "青空文庫の作品を縦書き・ルビ付きEPUBにする",
+      "helper": false,
+      "sha256": "99515a0a7cca0217a31851ce26e17554af8d3f83e0a932a6cc407ac5e06a9a53",
+      "options": [
+        "--all",
+        "--ids",
+        "--interval",
+        "--limit",
+        "--max-chapter-chars",
+        "--out",
+        "--ruby",
+        "--skip-existing",
+        "--suffix"
+      ],
+      "notes": [
+        "Macフォント参照あり。Linux用フォントの互換配置を利用する"
+      ]
+    },
+    {
+      "path": "books/epubkit.py",
+      "name": "kt-epubkit",
+      "description": "epubkit",
+      "helper": true,
+      "sha256": "0054642e3add2b1ffa01db38c5ba6fe21778685859a27aa813db263b845329dd",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/finalize.py",
+      "name": "kt-finalize",
+      "description": "書籍の出力・配置・仕上げ処理を行う",
+      "helper": false,
+      "sha256": "f897e5f1b565b297512edbd9bb9361fd6982ed513efb757aad9dbb607162cfde",
+      "options": [
+        "--all",
+        "--dry",
+        "--max-tokens",
+        "--out",
+        "--skip-existing"
+      ],
+      "notes": [
+        "Macのマウントパスあり。Linux側のマウント先を指定・移植する"
+      ]
+    },
+    {
+      "path": "books/gutenberg_extra_select.py",
+      "name": "kt-gutenberg-extra-select",
+      "description": "Project Gutenbergの追加取得候補を選ぶ",
+      "helper": false,
+      "sha256": "55cd4d0ede4b1ad795e1818ec4f064cce4ad3d4c14525207cd5b7c16ed402baf",
+      "options": [
+        "--dry"
+      ],
+      "notes": []
+    },
+    {
+      "path": "books/gutenberg_fetch.py",
+      "name": "kt-gutenberg-fetch",
+      "description": "Project Gutenbergの書籍本文を取得する",
+      "helper": false,
+      "sha256": "1bf3f71d7e2f630c57ba1937d7e68768215cff1e4eeb453ee343f32e56eccf5c",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/gutenberg_run.py",
+      "name": "kt-gutenberg-run",
+      "description": "Project Gutenbergの選定・取得・EPUB化を進める",
+      "helper": false,
+      "sha256": "cd56bf34a49faca87d9f54e84704ce5ef33356a3abfcc631ac6caf1f0d023143",
+      "options": [
+        "--host",
+        "--limit",
+        "--out",
+        "--shard"
+      ],
+      "notes": []
+    },
+    {
+      "path": "books/gutenberg_select.py",
+      "name": "kt-gutenberg-select",
+      "description": "Project Gutenbergから取得対象の書籍を選ぶ",
+      "helper": false,
+      "sha256": "dd68c498749b41f29cb88b43b74b20c3a0a89c896589786a9c6a211960fa36a9",
+      "options": [
+        "--de-all",
+        "--en-top",
+        "--out"
+      ],
+      "notes": []
+    },
+    {
+      "path": "books/gutenberg_to_epub.py",
+      "name": "kt-gutenberg-to-epub",
+      "description": "Project Gutenbergの本文をEPUBに変換する",
+      "helper": false,
+      "sha256": "141cb2848ef3f7b6e4fbefaf1d24f02b5c73974e3e581af285a8c2a0d447bb31",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/hf_compare.py",
+      "name": "kt-hf-compare",
+      "description": "書籍データの収録内容・品質を比較する",
+      "helper": false,
+      "sha256": "b8df2bbe0657ea1947b5d75e65be961e3ca7a36e008f9e90ab8247304d67df04",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/hf_headcheck.py",
+      "name": "kt-hf-headcheck",
+      "description": "書籍データの冒頭や構成を点検する",
+      "helper": false,
+      "sha256": "9a36eb8078ac4d7e93ac62806ddf7667d83d1bbf9d4286b0c600a2323f579f14",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/hf_pg_build.py",
+      "name": "kt-hf-pg-build",
+      "description": "Hugging FaceのGutenbergデータからEPUBを作成する",
+      "helper": false,
+      "sha256": "f71d48c828f9de92ba6d5d80fb083531070d4649ba8019fc61b3f5fe35f5a36a",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/hf_pg_scan.py",
+      "name": "kt-hf-pg-scan",
+      "description": "Hugging FaceのGutenbergデータを走査する",
+      "helper": false,
+      "sha256": "a1560d43b64dc6749e6f4c5274296b433e219e25549f3f53e795d401616779e7",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/hf_zh_probe.py",
+      "name": "kt-hf-zh-probe",
+      "description": "Hugging Faceの中国語書籍データを調査する",
+      "helper": false,
+      "sha256": "489784e56a7b8557cfaf0396760fd5923ec7ae836e3a9c34f9e378dbd89c77ba",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/luna_batch.py",
+      "name": "kt-luna-batch",
+      "description": "外部AI APIを使った書籍のバッチ処理を行う",
+      "helper": false,
+      "sha256": "a74ce3e008a6ca10bf9eaa16b432d354645786d1b79c86b33a39fba65c59b272",
+      "options": [
+        "--effort",
+        "--max-tokens",
+        "--n"
+      ],
+      "notes": [
+        "外部AI APIを利用。別途APIキーと利用料金が必要"
+      ]
+    },
+    {
+      "path": "books/make_zh_test.py",
+      "name": "kt-make-zh-test",
+      "description": "中国語書籍の表示確認用EPUBを作成する",
+      "helper": false,
+      "sha256": "9d6b35750902c0c6da056bd3542af1a47a39cc091a5ab87e5d000951d5e90d8e",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/medical_biglist.py",
+      "name": "kt-medical-biglist",
+      "description": "医学関連書籍の拡張リストを作成する",
+      "helper": false,
+      "sha256": "79ceb47a8ca2f23a4e32b967be14011417cce1bed05aad493c801fbc1f089a68",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/medical_ia_search.py",
+      "name": "kt-medical-ia-search",
+      "description": "Internet Archiveの医学書を調査する",
+      "helper": false,
+      "sha256": "527b3cc00cee1efaff35f98185fd24087fa38dbdd4e2ef85e1d2309905e2a04c",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/medical_list.py",
+      "name": "kt-medical-list",
+      "description": "医学関連書籍の候補リストを作成する",
+      "helper": false,
+      "sha256": "e03ec31ccfcc32516869773940184c534dada6ea41b799cde2c951cfb16cfd09",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/medical_search.py",
+      "name": "kt-medical-search",
+      "description": "医学関連の公開書籍を検索する",
+      "helper": false,
+      "sha256": "d74bdeb9b5358541be5403fbe2825b19b35d042f8df10c1c35e1175bdd0fe478",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/narou_library.py",
+      "name": "kt-narou-library",
+      "description": "公式APIの人気作品候補と、明示実行する逐次EPUB取得コマンド。Python 3.10+。",
+      "helper": false,
+      "sha256": "348a0f0be982903e597f76989a3cf4bffe1363ec2ecb96210cdeeb6480385c8c",
+      "options": [
+        "--count",
+        "--delay",
+        "--downloader",
+        "--execute",
+        "--limit",
+        "--manifest",
+        "--output",
+        "--output-dir",
+        "--reserve-gib",
+        "--resume"
+      ],
+      "notes": []
+    },
+    {
+      "path": "books/run_all.py",
+      "name": "kt-run-all",
+      "description": "書籍作成パイプライン全体を実行する",
+      "helper": false,
+      "sha256": "d0296b8cda0825a35cf1a8d80b3c4489e2c04d69de299af279c482a72ae09d61",
+      "options": [
+        "--all",
+        "--de-all",
+        "--en-top",
+        "--host",
+        "--out",
+        "--shard",
+        "--skip-existing"
+      ],
+      "notes": []
+    },
+    {
+      "path": "books/run_extra.sh",
+      "name": "kt-run-extra-shell",
+      "description": "追加の書籍作成バッチを実行する",
+      "helper": false,
+      "sha256": "64c3671282e72db9bf691f25b0cf244864a61ba22306d24f0a4139dcae896e24",
+      "options": [],
+      "notes": [
+        "Macの絶対パスあり。実行前に入力・出力パスの移植が必要"
+      ]
+    },
+    {
+      "path": "books/run_mirror2.sh",
+      "name": "kt-run-mirror2-shell",
+      "description": "書籍ミラーの取得バッチを実行する",
+      "helper": false,
+      "sha256": "4cdbb44866d3024b10814c7f0e54d8d62074fdfe8fb330667d347dae3a62f07c",
+      "options": [],
+      "notes": [
+        "Macの絶対パスあり。実行前に入力・出力パスの移植が必要"
+      ]
+    },
+    {
+      "path": "books/serial_log.py",
+      "name": "kt-serial-log",
+      "description": "書籍処理の進捗ログを集計する",
+      "helper": false,
+      "sha256": "09101a307c6cac5bdb4c9cdc10e4abaa49176ade66120f95142597a948f5d870",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/wallpaper_fix.py",
+      "name": "kt-wallpaper-fix",
+      "description": "電子書籍端末向け壁紙を補正する",
+      "helper": false,
+      "sha256": "9cb443d9446641032fe94b2ea7a310edd221d7a27bd9fccffe27b3436bdbbb1e",
+      "options": [
+        "--auto",
+        "--trim"
+      ],
+      "notes": []
+    },
+    {
+      "path": "books/wallpaper_x3.py",
+      "name": "kt-wallpaper-x3",
+      "description": "X3端末向け壁紙を生成する",
+      "helper": false,
+      "sha256": "29601b9cbfdcfd94ac9000e1e723eb3a03f892abbcfe32fa8583073db894ceed",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "books/wikisource_zh.py",
+      "name": "kt-wikisource-zh",
+      "description": "中国語Wikisourceの本文をEPUB化する",
+      "helper": false,
+      "sha256": "3cd28b59fc912d90b5cdaa6800898f32baf2cb15904ebf72404fae36b6e19a5b",
+      "options": [
+        "--author",
+        "--out",
+        "--seeds",
+        "--titles"
+      ],
+      "notes": []
+    },
+    {
+      "path": "books/wikisource_zh_crawl.py",
+      "name": "kt-wikisource-zh-crawl",
+      "description": "中国語Wikisourceの作品を収集する",
+      "helper": false,
+      "sha256": "b3bac14c7733b699fba029f53f1ea5664e6ba63c8f05495ee0edcadd90c3a8f8",
+      "options": [
+        "--limit-books",
+        "--out"
+      ],
+      "notes": []
+    },
+    {
+      "path": "books/zh_hf.py",
+      "name": "kt-zh-hf",
+      "description": "Hugging Faceの中国語書籍データをEPUB化する",
+      "helper": false,
+      "sha256": "54c7a0eb98557f6f9019d9c48c6f2899b09f8a954fa1e84190df54a1fce83ff4",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "study/StudyEpubCheckServer.java",
+      "name": "kt-studyepubcheckserver-java",
+      "description": "教材・書籍処理: StudyEpubCheckServer",
+      "helper": false,
+      "sha256": "2ba30605cb21beac20fbf8c232ba7972be7270337664a6c34c67cde60ff65ef4",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/analyze_import_structure.py",
+      "name": "kt-analyze-import-structure",
+      "description": "Recover printed page mappings and coarse TOC candidates without caching PDFs.",
+      "helper": false,
+      "sha256": "1f788f8f2d647d16d8c0c303797739c1830d6ebc614d218cc8b3030f1b0d8266",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/archive_unified_medical.py",
+      "name": "kt-archive-unified-medical",
+      "description": "Retire the four superseded unified X3 books after structured editions pass QA.",
+      "helper": false,
+      "sha256": "a54c3f3cf1a2640c6e836ef7def34c4ff98721e5cc5f1079387d52d7ab9aa4c6",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/audit_epub_image_storage.py",
+      "name": "kt-audit-epub-image-storage",
+      "description": "Read ZIP inventories only; measure duplicated-view storage without changing EPUBs.",
+      "helper": false,
+      "sha256": "763e0394b3137bebf051035edc0297cade4010884a57b8c75688d33dbb4b5370",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/audit_import_sources.py",
+      "name": "kt-audit-import-sources",
+      "description": "Read-only audit: verify moved source hashes and page counts; never copy files.",
+      "helper": false,
+      "sha256": "892faed8eac270ae1bd1e349e9c4dc82be85816e5033b5c02c495c0f416cc609",
+      "options": [
+        "--workers"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/audit_import_text.py",
+      "name": "kt-audit-import-text",
+      "description": "Inspect representative native text and fonts before selecting a reading mode.",
+      "helper": false,
+      "sha256": "7a715a3861b3999b6d9facb142ed6e3cf10a1624833f6838c22e1f5320eab49a",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/audit_medical_textbook_epubs.py",
+      "name": "kt-audit-medical-textbook-epubs",
+      "description": "Check chapter-first structure and EPUBCheck status of the 31 OCR booklets.",
+      "helper": false,
+      "sha256": "4c4f707fff3800b11c2a35f74bb10736e3217057a951324274d30d877b267859",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/audit_pdf_text_layers.py",
+      "name": "kt-audit-pdf-text-layers",
+      "description": "Read-only screening of sampled or all pages of each planned PDF.",
+      "helper": false,
+      "sha256": "868f5b65cdc48dce5063aa5a77da0e8037321d9f3b839cccb32bcab0c2fbb34e",
+      "options": [
+        "--all-pages"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/audit_qassist_recall_epubs.py",
+      "name": "kt-audit-qassist-recall-epubs",
+      "description": "Audit blank-to-answer Q-Assist recall EPUBs against their source pairs.",
+      "helper": false,
+      "sha256": "79058fffbe33b18c7d5d0e589515ce4bb8bd1fcf48ed0d010c55904e0bd260c5",
+      "options": [
+        "--epubcheck"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/audit_reference_epubs.py",
+      "name": "kt-audit-reference-epubs",
+      "description": "Corpus-wide archive, link, image-coverage and NCX audit of reference EPUBs.",
+      "helper": false,
+      "sha256": "37a75ea7afa653234ca5d5bc8ee0b5c4048139576b6d2007551a59ec8b58664a",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/audit_x3_epubs.py",
+      "name": "kt-audit-x3-epubs",
+      "description": "Corpus-wide structural and image audit for generated X3 EPUBs.",
+      "helper": false,
+      "sha256": "b7c88d3bf43a0b445dd7cc808ec76c56907644e5ddc26cbd45959ffcc5cbe625",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/build_firstaid_epubs.py",
+      "name": "kt-build-firstaid-epubs",
+      "description": "Native reflow text, font-glyph repair, diagrams and linked original appendix.",
+      "helper": false,
+      "sha256": "6fee02e89983e6545def3c84191dc440f168f3184c9d2b9836c927b6609165ea",
+      "options": [
+        "--sample-pages",
+        "--sample-start"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/build_gemini_reflow.py",
+      "name": "kt-build-gemini-reflow",
+      "description": "Build draft horizontal/vertical EPUBs and a source comparison from Gemini blocks.",
+      "helper": false,
+      "sha256": "7df9fb28412ffcac16df57203cb7207c5fa1d9a4c6f84483d600337cfdcd86e1",
+      "options": [
+        "--no-preview",
+        "--output",
+        "--pages",
+        "--title"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/build_imported_textbooks.py",
+      "name": "kt-build-imported-textbooks",
+      "description": "Faithful, chapter-organized X3 editions for imported scanned/diagram books.",
+      "helper": false,
+      "sha256": "7208b6a0f4a2422421e9cd039fd68739c7acbfba84664dde3c4cfd05325862e3",
+      "options": [
+        "--contains",
+        "--sample-pages",
+        "--sample-start",
+        "--workers"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/build_matcha_x3_simulator.py",
+      "name": "kt-build-matcha-x3-simulator",
+      "description": "Reproduce the isolated Matcha 1.6.6/X3 native rendering QA build on macOS.",
+      "helper": false,
+      "sha256": "cd9e362a6268838b29fad74803d0c274c82c55200483e18974bb8f17bdc8a479",
+      "options": [
+        "--build",
+        "--check",
+        "--depth",
+        "--detach",
+        "--fetch",
+        "--init",
+        "--install",
+        "--jobs",
+        "--reverse"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/build_medical_epub.py",
+      "name": "kt-build-medical-epub",
+      "description": "Build a local Q-Assist infectious-disease study library; never alters inputs.",
+      "helper": false,
+      "sha256": "fa48ad0c35f75677468e6c5453a401061602670a93e989423a1a4c97bab7279f",
+      "options": [
+        "--output",
+        "--root"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/build_medical_library.py",
+      "name": "kt-build-medical-library",
+      "description": "Build subject/section-organized medical lecture and exercise EPUBs.",
+      "helper": false,
+      "sha256": "c82a3a31a724bd3fab6c60ba2462193be6bbd5aeaea651a25d95f1f1744fd882",
+      "options": [
+        "--limit-pages",
+        "--output",
+        "--source-contains",
+        "--workers"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/build_new_free_materials.py",
+      "name": "kt-build-new-free-materials",
+      "description": "Build X3-sized grayscale EPUBs from newly acquired public study PDFs.",
+      "helper": false,
+      "sha256": "defa975189c0625de306edc179d0ff30f805a7554559a6a2d88fecbce408cbb6",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/build_official_exercises.py",
+      "name": "kt-build-official-exercises",
+      "description": "Separate official IPA multiple-choice problems from their published keys.",
+      "helper": false,
+      "sha256": "255e0cf727752b253ce2adb01fb6aa924933309ae679413d136956af104519db",
+      "options": [
+        "--workers"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/build_qassist_recall_epubs.py",
+      "name": "kt-build-qassist-recall-epubs",
+      "description": "Create paired blank/answer recall EPUBs from matching Q-Assist summary PDFs.",
+      "helper": false,
+      "sha256": "33e82d700d24b8b23bc8ebfdce00d0c25e441ecf53c9bf4027e02a8f34f49b37",
+      "options": [
+        "--force",
+        "--subject"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/build_reference_epubs.py",
+      "name": "kt-build-reference-epubs",
+      "description": "Lossless-in-coverage PDF reference EPUBs; never presented as separated exercises.",
+      "helper": false,
+      "sha256": "96723b5e22cf826ad82fa29ab2217771c5bef89c070cce8c6ebdad6db64bd4b4",
+      "options": [
+        "--pages-per-volume",
+        "--rebuild",
+        "--scope",
+        "--source-contains",
+        "--width"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/build_structured_textbooks.py",
+      "name": "kt-build-structured-textbooks",
+      "description": "Build coarse subject booklets with chapter navigation from retained page images.",
+      "helper": false,
+      "sha256": "6bfadf4b0e5e94ba984e1ce88712196d6c341c5e3271b19853bc5e391b55e1e7",
+      "options": [
+        "--group",
+        "--groups",
+        "--source-contains"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/build_x3_epubs.py",
+      "name": "kt-build-x3-epubs",
+      "description": "X3 grayscale editions: 528×792 maximum, JPEG quality 80, one source per EPUB.",
+      "helper": false,
+      "sha256": "67ae202400037fbd701d4f7c80f7c7884d3c75fc75441ca801114ae8fcede5d5",
+      "options": [
+        "--workers"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/check_document_regions.py",
+      "name": "kt-check-document-regions",
+      "description": "Check prototype pixel coverage, encoding dimensions and EPUBCheck.",
+      "helper": false,
+      "sha256": "88e2545ef63953c89e4145342def16c933e6feb4b084ff705db6c3e110ff9402",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/check_firstaid_text.py",
+      "name": "kt-check-firstaid-text",
+      "description": "Small real-input regressions for broken ligatures, prime signs and diagram labels.",
+      "helper": false,
+      "sha256": "9e81509c5e50bb028c067e8e4f6f247351d191207dae00fff230f4f6f5fdfc7b",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/check_imported_epubs.py",
+      "name": "kt-check-imported-epubs",
+      "description": "Validate EPUB structure, all-source coverage, image profiles and EPUBCheck.",
+      "helper": false,
+      "sha256": "6369cde65bb75131db18d2c409080e11557e5b7f9aefdf80269e86c49e8c2635",
+      "options": [
+        "--epubcheck",
+        "--partial"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/check_medical_epub.py",
+      "name": "kt-check-medical-epub",
+      "description": "Validate generated exercise order, answer mapping and source-page coverage.",
+      "helper": false,
+      "sha256": "a5208ee966489ef6f188a247b922593c4839a3dcd3edb888ea941a37da944ec3",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/check_official_exercises.py",
+      "name": "kt-check-official-exercises",
+      "description": "Check generated official-exam EPUB spine, keys, assets and appendix separation.",
+      "helper": false,
+      "sha256": "00a193390cf6f9ce9b018051231269714bbda16bc5ced5d464a6212e776b5658",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/check_structured_medical.py",
+      "name": "kt-check-structured-medical",
+      "description": "Check complete page coverage, EPUB links, image limits and exercise order.",
+      "helper": false,
+      "sha256": "16cb60c379e9c4c171de5c2a5b26eab5b7efa838e054d978b9ef1b374a00cdf2",
+      "options": [
+        "--folder"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/clean_sd_catalog_files.py",
+      "name": "kt-clean-sd-catalog-files",
+      "description": "Remove text/JSON catalogue files from the SD study-library tree only.",
+      "helper": false,
+      "sha256": "6d2774ce8c56ae1d965b82dfe8b810091656401e54d3bf3822bc033d9cf832d5",
+      "options": [
+        "--apply",
+        "--card"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/cleanup_obsolete_study.py",
+      "name": "kt-cleanup-obsolete-study",
+      "description": "Inventory obsolete study artifacts; apply only an unchanged, reviewed manifest.",
+      "helper": false,
+      "sha256": "e9bd0f8060a08289eb77c4541a21981bf65fb1b23e576389c65a3c1cb441a22d",
+      "options": [
+        "--apply",
+        "--manifest"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/cleanup_sd_duplicates.py",
+      "name": "kt-cleanup-sd-duplicates",
+      "description": "Remove only Mac-side EPUB duplicates verified against a connected SD card.",
+      "helper": false,
+      "sha256": "46f42fe496d0e660f0e457d5b58d1cfa5352eeca62d3605039cf48c38d541b5b",
+      "options": [
+        "--apply",
+        "--manifest",
+        "--sd"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない",
+        "Mac固有パスあり。引数または環境変数でLinux用に変更できることを確認する"
+      ]
+    },
+    {
+      "path": "study/compare_english_ocr.py",
+      "name": "kt-compare-english-ocr",
+      "description": "Compare saved OCR text, without sending data or automatically choosing a winner.",
+      "helper": false,
+      "sha256": "b9b283e840ccea5837a599b7afb43eb19cf012775d2de009ed7e69176fa221f5",
+      "options": [
+        "--output",
+        "--probes"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/convert_all_study.sh",
+      "name": "kt-convert-all-study-shell",
+      "description": "教材・書籍処理: convert all study",
+      "helper": false,
+      "sha256": "0be028f0c344096dac3772875cfa05b1e3928d3f28cfd7e7b94e92d629ff197e",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/convert_study_materials.py",
+      "name": "kt-convert-study-materials",
+      "description": "Plan/run/resume all study-material OCR. Personal noncommercial use; no SD writes.",
+      "helper": false,
+      "sha256": "22468fa7d79f8e3027102a6f00f414336439f225d8635921866589348f1eca99",
+      "options": [
+        "--book-title",
+        "--catalog",
+        "--confidence",
+        "--device",
+        "--dpi",
+        "--engine",
+        "--epubcheck-jar",
+        "--gemini-models",
+        "--input",
+        "--java",
+        "--json",
+        "--max-new-pages",
+        "--min-free-gib",
+        "--no-preview",
+        "--offline",
+        "--output",
+        "--pages",
+        "--scope",
+        "--tesseract",
+        "--title",
+        "--volume-pages",
+        "--yomitoku-python"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない",
+        "Mac固有パスあり。引数または環境変数でLinux用に変更できることを確認する"
+      ]
+    },
+    {
+      "path": "study/copy_imported_to_sd.py",
+      "name": "kt-copy-imported-to-sd",
+      "description": "Copy complete imported textbook groups to an SD card; keep logs local.",
+      "helper": false,
+      "sha256": "8d987d6bf3317ed2f904b64bdb86b9066cc9366d966b4cde87d8c3575586145e",
+      "options": [
+        "--apply",
+        "--card"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/copy_medical_library_to_sd.py",
+      "name": "kt-copy-medical-library-to-sd",
+      "description": "Copy complete medical-library books that fit, smallest first; retain all locals.",
+      "helper": false,
+      "sha256": "4f76385e0a68b4eb574b971ddfbcb2c4b0c207dab7bfcef2eb43f01466d6dfff",
+      "options": [
+        "--apply",
+        "--card",
+        "--family"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/copy_qassist_recall_to_sd.py",
+      "name": "kt-copy-qassist-recall-to-sd",
+      "description": "Copy verified Q-Assist recall EPUBs to a mounted X3 SD card.",
+      "helper": false,
+      "sha256": "fe5bae217eb1d3a41bee884f2edfa86ca42116ae0ccdd4580f3e6826193b4e9d",
+      "options": [
+        "--apply",
+        "--card"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/copy_x3_to_sd.py",
+      "name": "kt-copy-x3-to-sd",
+      "description": "Copy existing X3 study editions, without deleting or replacing local files.",
+      "helper": false,
+      "sha256": "bb6297e01aba2e779230eff61fe5447a7269652690a466036033a69aa9f3c540",
+      "options": [
+        "--apply",
+        "--card"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/document_regions.py",
+      "name": "kt-document-regions",
+      "description": "Conservative raster layout: whitespace columns, paragraph gaps, lossless gray.",
+      "helper": true,
+      "sha256": "3420f9b65136d372613c095d9a9152bd328c64de39648b84fc9080f3525627f5",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/epub_image_navigation.py",
+      "name": "kt-epub-image-navigation",
+      "description": "Name appended OCR image chapters in EPUB3 navigation and the NCX fallback.",
+      "helper": true,
+      "sha256": "fdf335c4775bccd2e7c81f5da919c5db0c398f2a135f10147faac06d502ff110",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/epub_payload.py",
+      "name": "kt-epub-payload",
+      "description": "Conservative comparison of reading payloads despite renamed EPUB chapters.",
+      "helper": true,
+      "sha256": "dbf8a9775d774bfa72f596bcab6a292b2015de1c00ef039451e984b6a73e5328",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/epub_titles.py",
+      "name": "kt-epub-titles",
+      "description": "Reader-facing Japanese titles, independent of acquisition hashes/filenames.",
+      "helper": true,
+      "sha256": "0a3e1482c826c37ba6de4a4ea6677cf6fe438c7a8a53ada850610217b75cd3d2",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/exercise_reflow.py",
+      "name": "kt-exercise-reflow",
+      "description": "Use existing verified exercise ledgers to recover original PDF question crops.",
+      "helper": true,
+      "sha256": "ad08c2b8b0b61265f17b829cd1502f4392eca5684c9bc7cb0a3657783ed08c52",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/extract_import_front.py",
+      "name": "kt-extract-import-front",
+      "description": "Local front-matter OCR only; compressed cache, one temporary image per worker.",
+      "helper": false,
+      "sha256": "cbbc0cf6088f9483a8d880c0e74451cccb82f1032a4b14e4c7e1cfeac054c8fe",
+      "options": [
+        "--contains",
+        "--start",
+        "--stop",
+        "--workers"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/extract_textbook_ocr.py",
+      "name": "kt-extract-textbook-ocr",
+      "description": "Recover page text locally from retained high-resolution EPUB source images.",
+      "helper": false,
+      "sha256": "a777ce4cad819b97e4e85410c5dcfe5cdff8623fd95dfe574d8f4301cdd412c9",
+      "options": [
+        "--first-pages",
+        "--workers"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/finalize_firstaid_style.py",
+      "name": "kt-finalize-firstaid-style",
+      "description": "Migrate existing v2 First Aid CSS to v3; never re-render or duplicate PDFs.",
+      "helper": false,
+      "sha256": "80d29c3f9715b4e7f5f67c264f399619ec7db37244abe09ebc11a00c1f94ac6a",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/finalize_import_plan.py",
+      "name": "kt-finalize-import-plan",
+      "description": "Freeze reviewed book-level choices and coarse chapter anchors for regeneration.",
+      "helper": false,
+      "sha256": "e65d2c54a2a26ed613d2f4e21ebaae69e29bf754b2a341313dc1af69ca1b525e",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/finalize_sd_study.py",
+      "name": "kt-finalize-sd-study",
+      "description": "Verify the selected SD library; keep inventory and logs on the computer.",
+      "helper": false,
+      "sha256": "66ec97bade298d3ec8b0ff141206484e742b096357d8dfaf491dcd7234bc6650",
+      "options": [
+        "--card"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/finalize_structured_medical.py",
+      "name": "kt-finalize-structured-medical",
+      "description": "Label image-only sources, keep unparsed problem pages out of lecture prose,",
+      "helper": false,
+      "sha256": "28574ef10f1272b2e38894541a535050c8dfd9aaf6ba3fbbed07854399aa1e4d",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/finalize_structured_textbooks.py",
+      "name": "kt-finalize-structured-textbooks",
+      "description": "Apply verified title-page author metadata and produce the final book index.",
+      "helper": false,
+      "sha256": "831e1532a9e175fd75618bebd092448dfcd8fd3260fac7423483f4a0e3056595",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/finalize_study_epubs.py",
+      "name": "kt-finalize-study-epubs",
+      "description": "Audit full source coverage, correct reference categories, and write indexes.",
+      "helper": false,
+      "sha256": "810c789a616d2183c5f1c98a0b045be26a1e82c9efab1b07ee7a38d3df42ecf0",
+      "options": [
+        "--require-complete"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/fix_textbook_language.py",
+      "name": "kt-fix-textbook-language",
+      "description": "Repair English textbook language without regenerating OCR or image assets.",
+      "helper": false,
+      "sha256": "5d78d3586465e78377f7ccc08f5566bff634660341a1dc84ea33f516aac3fefa",
+      "options": [
+        "--apply"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/gemini_free_pool.py",
+      "name": "kt-gemini-free-pool",
+      "description": "Optional project-scoped free model pool; explicit backoff, no billing changes.",
+      "helper": true,
+      "sha256": "9d451a14de5609c5c49853be53b287c036fa4a83d21052d136a9e8d3f813063b",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/gemini_textbook_ocr.py",
+      "name": "kt-gemini-textbook-ocr",
+      "description": "Extract ordered medical page blocks with Gemini; keep visual regions verbatim.",
+      "helper": false,
+      "sha256": "4c47c2486ef7422c09787d473fbe557b10453c656884b1756f23dceb0447e457",
+      "options": [
+        "--discard-rendered-pages",
+        "--dpi",
+        "--dry-run",
+        "--interval",
+        "--max-pages",
+        "--model",
+        "--output",
+        "--pages",
+        "--tesseract",
+        "--thinking-level"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/index_imported_textbooks.py",
+      "name": "kt-index-imported-textbooks",
+      "description": "Publish a local catalogue from receipts; keep original libraries intact.",
+      "helper": false,
+      "sha256": "7b0f52296c976e9224ce3d161521696896757673b24a9bb64699a6f58c78f170",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/index_structured_textbooks.py",
+      "name": "kt-index-structured-textbooks",
+      "description": "Index finished subject booklets and audit original page coverage.",
+      "helper": false,
+      "sha256": "08deea54571cf0d7b6a44b21cb39a150e2cde76000d54d5f6db6da9815e59d62",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/local_textbook_ocr.py",
+      "name": "kt-local-textbook-ocr",
+      "description": "Local YomiToku adapter; keep raw words and uncertain/visual regions intact.",
+      "helper": true,
+      "sha256": "5eecb64bb829647f76c77410308a3c9b0c7ccba786c98b023f91e523f9bf2c04",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/medical_layout.py",
+      "name": "kt-medical-layout",
+      "description": "Conservative native text paragraphs and source figures for medical EPUBs.",
+      "helper": true,
+      "sha256": "72bf97c73971f9a60e4509e68f1303fa9cc7c02f462e4c74acd16806ae49cf64",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/move_import_sources.py",
+      "name": "kt-move-import-sources",
+      "description": "Reproducible, same-filesystem rename only. Default is a read-only plan.",
+      "helper": false,
+      "sha256": "16bd224d8be2a450545f467b7a473867a21e17de5a655aa8ca62cabdb6a57dc0",
+      "options": [
+        "--apply",
+        "--from-directory"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/move_infection_epubs_to_medical_subject.py",
+      "name": "kt-move-infection-epubs-to-medical-subject",
+      "description": "Move the infection X3 books under the medical-licensing subject folder.",
+      "helper": false,
+      "sha256": "3fc173611c48254e94a3990f077386212d6824e9acfe9da7e7d2ca816ad1550d",
+      "options": [
+        "--apply",
+        "--card"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/ocr_image_server.swift",
+      "name": "kt-ocr-image-server-swift",
+      "description": "教材・書籍処理: ocr image server",
+      "helper": false,
+      "sha256": "b7fbb73b39ac07be844c3038cd746d0cba53adf9f9f58f8ab8507ed0835d0a60",
+      "options": [],
+      "notes": [
+        "macOS Visionを使うSwiftツール。Debian上では実行不可。Mac側の処理として利用する"
+      ]
+    },
+    {
+      "path": "study/ocr_pdf_layout.swift",
+      "name": "kt-ocr-pdf-layout-swift",
+      "description": "教材・書籍処理: ocr pdf layout",
+      "helper": false,
+      "sha256": "45ce67b037100391a19f2bbecc00ddc6b7a51bd46db79a678ac8d4e1bc32d449",
+      "options": [],
+      "notes": [
+        "macOS Visionを使うSwiftツール。Debian上では実行不可。Mac側の処理として利用する"
+      ]
+    },
+    {
+      "path": "study/optimize_study_x3_images.py",
+      "name": "kt-optimize-study-x3-images",
+      "description": "Update generated study EPUBs to the X3 image policy, reusing all text and OCR.",
+      "helper": false,
+      "sha256": "83b5ee81a432f7e4c586dc67ca2312e9b92a01651372138b4f3f7b0d091d7f0b",
+      "options": [
+        "--root"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/organize_device_library.py",
+      "name": "kt-organize-device-library",
+      "description": "Build a purpose-organized local delivery tree using verified hard links.",
+      "helper": false,
+      "sha256": "e992cdb9fecfb1bdae866fe4f1b439c13b11979010e14cd6620338b92463f1b8",
+      "options": [
+        "--apply",
+        "--include-imported"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/pdf_native_text.py",
+      "name": "kt-pdf-native-text",
+      "description": "Recover Unicode from embedded font glyph names, without guessing words.",
+      "helper": true,
+      "sha256": "80258384b94b3742c27d9116a10f47fe7368b2948c2a12ae01af1cdb9738ed7e",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/plan_free_textbook_ocr.py",
+      "name": "kt-plan-free-textbook-ocr",
+      "description": "Read the saved SD inventory and group source materials without changing the card.",
+      "helper": false,
+      "sha256": "bbf7c3579628532591be642b4ad52572988104848d0f7ff77488c6a1b1958856",
+      "options": [
+        "--inventory",
+        "--output",
+        "--scan-sd",
+        "--sd-root"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない",
+        "Mac固有パスあり。引数または環境変数でLinux用に変更できることを確認する"
+      ]
+    },
+    {
+      "path": "study/prepare_ocr_reflow.py",
+      "name": "kt-prepare-ocr-reflow",
+      "description": "Prepare bounded, resumable OCR comparisons before medical EPUB publication.",
+      "helper": false,
+      "sha256": "b25419de24c7c20c61b28c4155fe55b21cd10ae623544fbc5fe79ad4b11df565",
+      "options": [
+        "--dpi",
+        "--dry-run",
+        "--engine",
+        "--language",
+        "--list-langs",
+        "--max-pages",
+        "--model",
+        "--output",
+        "--pages",
+        "--psm",
+        "--version"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/preview_document_regions.py",
+      "name": "kt-preview-document-regions",
+      "description": "Create reviewable representative adaptive EPUBs, without replacing books.",
+      "helper": false,
+      "sha256": "a5cba2ae3bf8f5f892e1024768c7198b3716e2b2ad28d6e186e4174887fb67df",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/preview_import_epubs.cjs",
+      "name": "kt-preview-import-epubs-node",
+      "description": "教材・書籍処理: preview import epubs",
+      "helper": false,
+      "sha256": "d56f3cbbebd64ece8931983fa62fb782ec8de28efa6fd4d8fc18dfe4c7c3ee3f",
+      "options": [
+        "--disable-gpu",
+        "--no-sandbox"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない",
+        "Mac固有パスあり。引数または環境変数でLinux用に変更できることを確認する"
+      ]
+    },
+    {
+      "path": "study/preview_import_epubs.py",
+      "name": "kt-preview-import-epubs",
+      "description": "Extract only selected EPUB documents and their assets for local layout QA.",
+      "helper": false,
+      "sha256": "f14ea7dfcc8b9a90a3909c1724a4a53c69e7958c689f1617f34c6056bc8b354d",
+      "options": [
+        "--documents"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/qualification_categories.py",
+      "name": "kt-qualification-categories",
+      "description": "Consistent category names for qualification EPUBs on the X3 SD card.",
+      "helper": true,
+      "sha256": "7805ba34adb5504d1686388e1411e87f974cb87c57315dc30edc5b0b0179960d",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/readable_epub_tables.py",
+      "name": "kt-readable-epub-tables",
+      "description": "Migrate generated coordinate-labelled OCR tables to readable row groups.",
+      "helper": true,
+      "sha256": "0da9776e700e869aae90b80ed4bf36db5fd8555e14ab41ea496ebdcc6394fc8e",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/rebuild_imported_textbooks.py",
+      "name": "kt-rebuild-imported-textbooks",
+      "description": "Plan or rebuild the reviewed import. Default is a read-only plan.",
+      "helper": false,
+      "sha256": "d06aef6de32b3c72d2866e675d23fb63d551fbcdfac137392d9a6da1f288707b",
+      "options": [
+        "--build",
+        "--epubcheck",
+        "--workers"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/recover_textbook_outline.py",
+      "name": "kt-recover-textbook-outline",
+      "description": "教材・書籍処理: recover textbook outline",
+      "helper": false,
+      "sha256": "cfcdc5447c70fb3834ff8a665473378c339779b72950edb23b4600b190a1ddb3",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/remove_imported_sd_copies.py",
+      "name": "kt-remove-imported-sd-copies",
+      "description": "Remove only the 75 previously logged SD copies, after checking retained locals.",
+      "helper": false,
+      "sha256": "0db5d96b65e1c6e05fd831eab88ab22a18c04478099b1c2a4f40a7110d94858a",
+      "options": [
+        "--apply",
+        "--card"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/remove_reference_intro_pages.py",
+      "name": "kt-remove-reference-intro-pages",
+      "description": "Remove generated prose-only intro chapters from retained reference EPUBs.",
+      "helper": false,
+      "sha256": "7377f2c8d3d1827b6f41df983da87a382f94e9174fff96c66d36ebebe8bd6ab1",
+      "options": [
+        "--apply"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/rename_structured_textbook_titles.py",
+      "name": "kt-rename-structured-textbook-titles",
+      "description": "Add explicit chapter ranges to structured medical EPUB display titles.",
+      "helper": false,
+      "sha256": "e6817564bcc1ff29b8b3fa63971f52c7c203b18dad23563295c363817cf84e49",
+      "options": [
+        "--apply"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/rename_study_epubs.py",
+      "name": "kt-rename-study-epubs",
+      "description": "Give generated EPUBs readable titles and filenames without changing lessons.",
+      "helper": false,
+      "sha256": "e1ef336dfc497b2b94c0d68a4de71046d508a3594c441afc8762848d478a7243",
+      "options": [
+        "--apply"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/reorganize_qualification_epubs.py",
+      "name": "kt-reorganize-qualification-epubs",
+      "description": "Sort X3 qualification EPUBs into 問題, 解答, and 教材 folders.",
+      "helper": false,
+      "sha256": "37a6bac0cc4d492d30e7932a3a537c81c9b4c346485dae71232130e08a78ac95",
+      "options": [
+        "--apply",
+        "--card"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/repair_study_display.py",
+      "name": "kt-repair-study-display",
+      "description": "Rebuild already generated study volumes from cached OCR, without new requests.",
+      "helper": false,
+      "sha256": "14ab449fb730123237a47b54b26a4a591820441c5aee7dcb76b316d31dd05319",
+      "options": [
+        "--force",
+        "--no-preview",
+        "--output",
+        "--pages",
+        "--root",
+        "--title",
+        "--volume-folder"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/replace_completed_sd_epubs.py",
+      "name": "kt-replace-completed-sd-epubs",
+      "description": "Stage and verify all completed OCR books before retiring matching SD originals.",
+      "helper": false,
+      "sha256": "c0af83fca813743def17d6e9a6a668c3450fd115e9afb6b54fb43059586b50d9",
+      "options": [
+        "--apply",
+        "--card",
+        "--manifest",
+        "--profile"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない",
+        "Mac固有パスあり。引数または環境変数でLinux用に変更できることを確認する"
+      ]
+    },
+    {
+      "path": "study/research/benchmark_matcha_images.py",
+      "name": "kt-benchmark-matcha-images",
+      "description": "Twelve-page local feasibility study; never writes EPUBs or changes SD files.",
+      "helper": false,
+      "sha256": "4f82e76206074c4ec6179fa0515cdb1490e2c5d7114ec76d6000cf4f1d52b81b",
+      "options": [
+        "--node"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/research/check_matcha_coverage.cjs",
+      "name": "kt-check-matcha-coverage-node",
+      "description": "教材・書籍処理: check matcha coverage",
+      "helper": false,
+      "sha256": "687a6f4eb77466acd48c84d025e0485f5462fc6ee8b7b3e3d9f4a4012880991a",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/research/fetch_matcha_sources.py",
+      "name": "kt-fetch-matcha-sources",
+      "description": "Download only pinned public source files and verify their Git blob IDs.",
+      "helper": false,
+      "sha256": "21a02ea8bc4db3c8a9cab6a2c305408e5e9558ce516c0ee5f1193bd76235cded",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/research/matcha_quantize.cjs",
+      "name": "kt-matcha-quantize-node",
+      "description": "教材・書籍処理: matcha quantize",
+      "helper": false,
+      "sha256": "8765c3f148d141f7fb55603fc7da8a72a88c4166f6b08b69af6fb615d2850313",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/run_matcha_render_case.py",
+      "name": "kt-run-matcha-render-case",
+      "description": "Render one real EPUB with the pinned 1.6.6 X3 host build.",
+      "helper": false,
+      "sha256": "a06f0ed86275cbc9f3f9fc976e326d7ff15f46f1c17a634267cd47ab6d7ca5c2",
+      "options": [
+        "--case",
+        "--duration-ms",
+        "--epub",
+        "--font-dir",
+        "--font-family",
+        "--forced-horizontal",
+        "--forced-vertical",
+        "--keys",
+        "--spine"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/run_study_pilot.py",
+      "name": "kt-run-study-pilot",
+      "description": "Staged, resumable local study conversion: representative pages, then selected books.",
+      "helper": false,
+      "sha256": "14acdb028a2d13035ad3478654db2316cbd4b9f7131983c1520b1d210337976d",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/sd_epub_utils.py",
+      "name": "kt-sd-epub-utils",
+      "description": "Shared cleanup helpers for EPUB filenames and OPF titles on X3 SD cards.",
+      "helper": true,
+      "sha256": "37a2d1d7ec2b40c71afc934838083629cf92bf515eb763e52655ae7a96a1eadd",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/setup_yomitoku.sh",
+      "name": "kt-setup-yomitoku-shell",
+      "description": "教材・書籍処理: setup yomitoku",
+      "helper": false,
+      "sha256": "a16641b8378b7a7eef769e1a725b975716cf02a0d975e03e3ad04ee80eeb955f",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/test_cleanup_obsolete_study.py",
+      "name": "kt-test-cleanup-obsolete-study",
+      "description": "教材・書籍処理: test cleanup obsolete study",
+      "helper": true,
+      "sha256": "ca0488fcbeba7b1f932ee756d5a7a0ef190a0fb4d6075dd208e216719440a463",
+      "options": [
+        "--apply",
+        "--manifest"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/test_english_ocr_comparison.py",
+      "name": "kt-test-english-ocr-comparison",
+      "description": "教材・書籍処理: test english ocr comparison",
+      "helper": true,
+      "sha256": "abb5e0750e3ccbed3ff11fe6c367681ea505ccabac372a3132996d70b63c84c5",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/test_epub_image_navigation.py",
+      "name": "kt-test-epub-image-navigation",
+      "description": "教材・書籍処理: test epub image navigation",
+      "helper": true,
+      "sha256": "b885485fb43a5ac84289291f47eef7c9e3575f52d5b9ea19f71fc00b34ec3064",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/test_readable_epub_tables.py",
+      "name": "kt-test-readable-epub-tables",
+      "description": "教材・書籍処理: test readable epub tables",
+      "helper": true,
+      "sha256": "861e73ae9a99506782a7c99e151777ac4724b7e011423b3b0e1cc6d1f9aa12f4",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/test_replace_completed_sd_epubs.py",
+      "name": "kt-test-replace-completed-sd-epubs",
+      "description": "教材・書籍処理: test replace completed sd epubs",
+      "helper": true,
+      "sha256": "eb447f4b94e75e1d61cfb35472bfb99a303834fd9f450fd7022dca27a13cfe27",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/test_sd_duplicate_cleanup.py",
+      "name": "kt-test-sd-duplicate-cleanup",
+      "description": "教材・書籍処理: test sd duplicate cleanup",
+      "helper": true,
+      "sha256": "b4692126d13dcfbf19fb14b3aed51f3665a866574f4ec8172c29767e17210725",
+      "options": [
+        "--apply",
+        "--manifest",
+        "--sd"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/test_textbook_conversion.py",
+      "name": "kt-test-textbook-conversion",
+      "description": "Offline regression tests for content preservation and resumable conversion.",
+      "helper": true,
+      "sha256": "e1de508d8372e0557b62fef4dd349fc4afab1e841b119cca43257addc6e0b895",
+      "options": [
+        "--inventory",
+        "--output",
+        "--scan-sd",
+        "--sd-root"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/test_x3_epub_images.py",
+      "name": "kt-test-x3-epub-images",
+      "description": "教材・書籍処理: test x3 epub images",
+      "helper": true,
+      "sha256": "a73b4fcf1467a0e61c66069d893f076af89e44ca8292e178bb49ba3ec0b5d1c7",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/update_sd_study_library.py",
+      "name": "kt-update-sd-study-library",
+      "description": "Reorganize X3 study EPUBs and add complete medical textbook groups.",
+      "helper": false,
+      "sha256": "37ae55cad047ddd992179713c80a5700b14a5e7f930151289afb0b33aa070ae2",
+      "options": [
+        "--apply",
+        "--card"
+      ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/verify_import_chapters.py",
+      "name": "kt-verify-import-chapters",
+      "description": "Check chapter anchors against the visible folio, locally; no retained raster cache.",
+      "helper": false,
+      "sha256": "7948819a272d6ac261debae09bcd31762da76f0fb54add2512f2a8df8600b48d",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/x3_epub_images.py",
+      "name": "kt-x3-epub-images",
+      "description": "X3 image export policy. OCR inputs and recognized text stay at source quality.",
+      "helper": true,
+      "sha256": "2db8ca1d93b22eb63949aae2d395283fc01872f5bb1211774316443a1726cae9",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/yomitoku_worker.py",
+      "name": "kt-yomitoku-worker",
+      "description": "Persistent local YomiToku worker. Run with the dedicated YomiToku Python.",
+      "helper": false,
+      "sha256": "8bf52a3ee0c5e5115ea2728a3785465cca7028929b960dfc6160d3c1b3240213",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "tools/ai-generator-app/app.py",
+      "name": "kt-app",
+      "description": "AI文章生成アプリを起動する",
+      "helper": false,
+      "sha256": "0ffeb244ba5929c82d333fbcf879d641367107e4bd282dec897e28b41b0032de",
+      "options": [],
+      "notes": [
+        "外部AI APIを利用。別途APIキーと利用料金が必要",
+        "Streamlitアプリ。公開用ポートは自動追加しない"
+      ]
+    },
+    {
+      "path": "tools/ai-generator-app/generator_core.py",
+      "name": "kt-generator-core",
+      "description": "generator_core",
+      "helper": true,
+      "sha256": "82e609650088bb25be2f5e0618f1f588706eef09a17267c1bd8980f4cc27b016",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/dictionaries/eijiro_to_stardict.py",
+      "name": "kt-eijiro-to-stardict",
+      "description": "英辞郎の原本をStarDict辞書に変換する",
+      "helper": false,
+      "sha256": "b2ee5dd609e94cfc1cc9c04978094507f2694b7f17dbe737792d79a8b2a1b0b0",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/dictionaries/german-dict/convert_common.py",
+      "name": "kt-convert-common",
+      "description": "convert_common",
+      "helper": true,
+      "sha256": "bb3558e6f7164dbc5470f19f0351e0abea2e4154bd2c40b1ae50c0e3f2248089",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/dictionaries/german-dict/convert_dictcc.py",
+      "name": "kt-convert-dictcc",
+      "description": "dict.ccの独英データをStarDict辞書に変換する",
+      "helper": false,
+      "sha256": "447a531fd496de717994a7c7fa7cf5b2d3d4540abaddc927f1fa1f610941ff92",
+      "options": [
+        "--encoding",
+        "--swap"
+      ],
+      "notes": []
+    },
+    {
+      "path": "tools/dictionaries/german-dict/convert_wadoku.py",
+      "name": "kt-convert-wadoku",
+      "description": "WaDokuの独和データをStarDict辞書に変換する",
+      "helper": false,
+      "sha256": "7f1fe32606beff3ee4b03288088d721c4edd9ca032fc326e53a63cfbe7281876",
+      "options": [
+        "--inspect",
+        "--max-defs"
+      ],
+      "notes": []
+    },
+    {
+      "path": "tools/dictionaries/german-dict/stardict_writer.py",
+      "name": "kt-stardict-writer",
+      "description": "stardict_writer",
+      "helper": true,
+      "sha256": "930aa927ad60fa005cd6827df68c8f5f8e2f5434cc3a54871b74816f69dbbceb",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/dictionaries/german-dict/tests/__init__.py",
+      "name": "kt---init--",
+      "description": "__init__",
+      "helper": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/dictionaries/german-dict/tests/helpers.py",
+      "name": "kt-helpers",
+      "description": "helpers",
+      "helper": true,
+      "sha256": "6fe5411f870f32104bd1cf9aa6d8f44570bcf97b57f32ef0ef74db3c738274f5",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/dictionaries/german-dict/tests/test_dictcc.py",
+      "name": "kt-test-dictcc",
+      "description": "test_dictcc",
+      "helper": true,
+      "sha256": "1bd7b635ec5e82968d0ecb59164de97c195a9be52be5b19f3a76fb1d656084dd",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/dictionaries/german-dict/tests/test_validate.py",
+      "name": "kt-test-validate",
+      "description": "test_validate",
+      "helper": true,
+      "sha256": "543143cc5e307ac3504049f6b501ea5d2795028cda9063145d500a21df869a91",
+      "options": [
+        "--lookup"
+      ],
+      "notes": []
+    },
+    {
+      "path": "tools/dictionaries/german-dict/tests/test_wadoku.py",
+      "name": "kt-test-wadoku",
+      "description": "test_wadoku",
+      "helper": true,
+      "sha256": "c88fcf2b73f0647fb8e732c7b21314110ae01c3b5fb9ddcbb2f949fe418d0a7d",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/dictionaries/german-dict/tests/test_writer.py",
+      "name": "kt-test-writer",
+      "description": "test_writer",
+      "helper": true,
+      "sha256": "243952789fdcaa7d3fca219576b10f94d119f57d007e64a05fdb30b589f92a80",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/dictionaries/german-dict/validate_dictionary.py",
+      "name": "kt-validate-dictionary",
+      "description": "StarDict辞書の構造・文字・語彙を検証する",
+      "helper": false,
+      "sha256": "fd0d0ab0568b729a89053acade1cc66e89a63c513e29313e78d0ef9c9b743ba0",
+      "options": [
+        "--expect-japanese",
+        "--expect-umlaut",
+        "--lookup"
+      ],
+      "notes": []
+    },
+    {
+      "path": "tools/epub/karakeep_lists_to_epub.py",
+      "name": "kt-karakeep-lists-to-epub",
+      "description": "Karakeepのリスト別にEPUB出力を計画・生成・修復する",
+      "helper": false,
+      "sha256": "364b3991ed6c84a3a3ba2b36bedf086bdbbee3c70db63aa4006500771e3cef1c",
+      "options": [
+        "--dry-run",
+        "--height",
+        "--limit",
+        "--list",
+        "--max-link-ratio",
+        "--min-chars",
+        "--no-unclassified",
+        "--out",
+        "--width",
+        "--workers"
+      ],
+      "notes": []
+    },
+    {
+      "path": "tools/epub/karakeep_to_epub.py",
+      "name": "kt-karakeep-to-epub",
+      "description": "Karakeepの保存記事をEPUBに変換する",
+      "helper": false,
+      "sha256": "65c55563ad78c10db0c69875f2a7d435479e1405fe5e6621f004e72419e6e0b8",
+      "options": [
+        "--height",
+        "--img-mode",
+        "--out",
+        "--width"
+      ],
+      "notes": [
+        "Macフォント参照あり。Linux用フォントの互換配置を利用する"
+      ]
+    },
+    {
+      "path": "tools/karakeep/recrawl/analyze_patterns.py",
+      "name": "kt-analyze-patterns",
+      "description": "Twitter再クロール失敗の傾向を分析する",
+      "helper": false,
+      "sha256": "f5b5e076bab83e6aec181351ff8f38058934dc1e089c216e39dfc0e772e5aefd",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/karakeep/recrawl/check_status.sh",
+      "name": "kt-check-status-shell",
+      "description": "Twitter再クロール結果を確認し進捗を更新する",
+      "helper": false,
+      "sha256": "e97310bdc47822c4360a3f10db8abbb4ccb6bca66e9764cbed2ff25e48a53ba3",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/karakeep/recrawl/find_failed_twitter.py",
+      "name": "kt-find-failed-twitter",
+      "description": "取得に失敗したTwitterブックマークを抽出する",
+      "helper": false,
+      "sha256": "f17729e2b3381322989bcdac5d91f95cbe3fad9d852ce787f63e81e329249d2a",
+      "options": [
+        "--all",
+        "--dry-run",
+        "--json",
+        "--limit",
+        "--output",
+        "--report",
+        "--threshold",
+        "--verbose"
+      ],
+      "notes": []
+    },
+    {
+      "path": "tools/karakeep/recrawl/find_failed_twitter.sh",
+      "name": "kt-find-failed-twitter-shell",
+      "description": "取得に失敗したTwitterブックマークを抽出する",
+      "helper": false,
+      "sha256": "3a9f61c51023c346111c9de3188aeac96ed6dc6c31ebee810fee4bb3c5311e49",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/karakeep/recrawl/manage_list.sh",
+      "name": "kt-manage-list-shell",
+      "description": "Twitter再クロール対象のKarakeepリストを管理する",
+      "helper": false,
+      "sha256": "225a4da4207fe1a0c4a8a39e3168734f37e8d74624553b281cd753559feaeec7",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/karakeep/recrawl/recrawl.sh",
+      "name": "kt-recrawl-shell",
+      "description": "失敗したTwitterブックマークを再クロールする",
+      "helper": false,
+      "sha256": "b0e852039e52b4e3fce3edf2cfdf157c97f31d0295b38b8978740ee276067d1b",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/karakeep/sync_nas_pdfs_to_karakeep.py",
+      "name": "kt-sync-nas-pdfs-to-karakeep",
+      "description": "NAS上のPDFをKarakeepへ同期する",
+      "helper": false,
+      "sha256": "6401dbccdc4fe448bfdfd074e5c1f6cc520dc27948fbf6bb677adbc7b337f543",
+      "options": [
+        "--allow-junk-names",
+        "--asset",
+        "--delay",
+        "--dry-run",
+        "--force",
+        "--limit",
+        "--max-size-mb",
+        "--min-size-kb",
+        "--nas-path",
+        "--no-folder-tags",
+        "--state-file",
+        "--tag-name",
+        "--tags",
+        "--title",
+        "--verbose"
+      ],
+      "notes": [
+        "Macのマウントパスあり。Linux側のマウント先を指定・移植する"
+      ]
+    },
+    {
+      "path": "tools/research/create_dataset.py",
+      "name": "kt-create-dataset",
+      "description": "ブックマークやTwitterエクスポートから調査データセットを作成する",
+      "helper": false,
+      "sha256": "4d770627a3f729bc6c7ff5dc1c69aa163411a117d52af4783d5e9d91373f95e3",
+      "options": [
+        "--all",
+        "--json"
+      ],
+      "notes": []
+    },
+    {
+      "path": "tools/research/search_all_project_tools.py",
+      "name": "kt-search-all-project-tools",
+      "description": "ブックマークのエクスポートから開発ツールを調査する",
+      "helper": false,
+      "sha256": "9a6dc51e0550d042d0b945481d66f3b031f61125ea36e02916618f0c8ee4503b",
+      "options": [],
+      "notes": []
+    },
+    {
+      "path": "tools/research/search_todo_apps.py",
+      "name": "kt-search-todo-apps",
+      "description": "ブックマークのエクスポートからTODOアプリを調査する",
+      "helper": false,
+      "sha256": "0c0309de957acdfc84ebc40fdcfa336154b30cb426851a406276ac1df60af064",
+      "options": [],
+      "notes": []
+    }
+  ]
+}

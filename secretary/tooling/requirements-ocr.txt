@@ -1,0 +1,5 @@
+yomitoku==0.15.1
+Pillow==12.3.0
+PyMuPDF==1.26.7
+torch==2.8.0
+torchvision==0.23.0

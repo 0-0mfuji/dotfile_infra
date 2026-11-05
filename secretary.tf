@@ -4,8 +4,9 @@ variable "secretary" {
   type = object({
     ip            = string
     cpu           = optional(number, 2)
-    memory        = optional(string, "4GiB")
-    disk_size     = optional(string, "30GiB")
+    memory        = optional(string, "16GiB")
+    disk_size     = optional(string, "120GiB")
+    gpu           = optional(bool, true)
     notes_port    = optional(number)
     nanomuse_port = optional(number)
   })
@@ -17,7 +18,7 @@ resource "incus_instance" "secretary" {
   name     = "secretary-dev"
   image    = "images:debian/13/cloud"
   type     = "container"
-  profiles = [incus_profile.dev_base.name]
+  profiles = concat([incus_profile.dev_base.name], each.value.gpu ? [incus_profile.gpu_passthrough.name] : [])
   config = {
     "limits.cpu"          = tostring(each.value.cpu)
     "limits.memory"       = each.value.memory

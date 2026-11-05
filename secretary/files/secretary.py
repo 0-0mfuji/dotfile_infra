@@ -573,6 +573,14 @@ def doctor(check=False):
     print('TimeTree:', snapshot.get('fetched_at', '未取得'), 'stale=' + str(snapshot['stale']), 'error=' + str(snapshot.get('last_error', snapshot.get('error'))))
     for failed in snapshot.get('failed_calendars', []):
         print('TimeTree calendar ' + failed['calendar_id'] + ': ' + failed['error'])
+    tooling = Path('/opt/secretary/secretary-tools.py')
+    if tooling.exists():
+        result = subprocess.run(['/usr/bin/python3', str(tooling), 'doctor'], capture_output=True, text=True)
+        if result.returncode == 0:
+            print('Tools/skills/GPU/model:', result.stdout.strip())
+        else:
+            print('Tools diagnostic failed; run /opt/secretary/secretary-tools.py doctor')
+            failures += 1
     return 1 if failures else 0
 
 

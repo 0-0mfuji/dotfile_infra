@@ -1,0 +1,40 @@
+---
+name: kt-sync-nas-pdfs-to-karakeep
+description: "NAS上のPDFをKarakeepへ同期する。Karakeep-toolの tools/karakeep/sync_nas_pdfs_to_karakeep.py を使う依頼に対応する。"
+---
+
+# NAS上のPDFをKarakeepへ同期する
+
+対象は `tools/karakeep/sync_nas_pdfs_to_karakeep.py`。ソースは固定コミットの `/srv/secretary/karakeep-tool` にある。
+
+1. `secretary_tools__inspect` に `path="tools/karakeep/sync_nas_pdfs_to_karakeep.py"` を渡し、最新の導入状態、ソース、引数、必要データを確認する。`--help` を実行するだけで処理が走るツールもあるので、最初はソースを読む。
+2. 指定された対象・件数・出力先に絞る。`data/` の原本を上書きせず、成果物の出力先を明示する。Macの絶対パス、NAS・SDカード、別repo、API設定が不足する場合は必要項目を具体的に伝える。
+3. `secretary_tools__run` に `path="tools/karakeep/sync_nas_pdfs_to_karakeep.py"` と文字列配列 `args` を渡す。シェル文字列を組み立てず、フラグ・値を別々の要素にする。戻るjob IDを `secretary_tools__job_status` に渡して終了と成果物を確認する。
+4. 対応する場合だけdry-run/planを利用する。未対応なのに `--dry-run` を付けない。外部更新・削除・一括処理は具体的な対象を提示して承認を受け、同じ範囲について会話で重複確認しない。健康診断としてバッチを起動しない。
+
+引数候補（適用条件はソースで確認）: `--allow-junk-names`, `--asset`, `--delay`, `--dry-run`, `--force`, `--limit`, `--max-size-mb`, `--min-size-kb`, `--nas-path`, `--no-folder-tags`, `--state-file`, `--tag-name`, `--tags`, `--title`, `--verbose`
+
+注意:
+- Macのマウントパスあり。Linux側のマウント先を指定・移植する
+
+ソースの使用説明:
+
+```text
+Synology NAS -> Karakeep PDF Auto-Sync Tool
+===========================================
+- Recursively scans NAS directories for PDF files.
+- Filters out junk, corrupted, dummy, and system metadata files.
+- Automatically generates tags from folder hierarchy and custom options.
+- Detects duplicates using SHA256 hashes and local sync state.
+- Safely uploads PDFs to Karakeep with progress display and state persistence.
+
+Usage:
+  # Dry-run (preview what would be uploaded)
+  python3 sync_nas_pdfs_to_karakeep.py --nas-path /Volumes/document --dry-run
+
+  # Actually upload
+  python3 sync_nas_pdfs_to_karakeep.py --nas-path /Volumes/document
+
+  # Upload with custom tags and limits
+  python3 sync_nas_pdfs_to_karakeep.py --nas-path /Volumes/document --tags nas,NAS-document --limit 50
+```

@@ -13,3 +13,7 @@ crash.log
 crash.*.log
 .terraformrc
 terraform.rc
+
+# Local Python validation artifacts
+__pycache__/
+*.py[cod]

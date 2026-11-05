@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# Called by nanomuse-install inside secretary-dev. No private Git key is installed.
+set -euo pipefail
+[ "$(id -u)" -eq 0 ] || exit 1
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DIR/versions.env"
+bundle="${1:?usage: tools-install <host-created-karakeep.bundle>}"
+[ -f "$bundle" ] || { echo 'Karakeep Git bundle missing'; exit 1; }
+# Enable non-free userspace CUDA libraries, following the existing dev provisioner.
+if [ -f /etc/apt/sources.list.d/debian.sources ]; then
+  python3 - <<'PYAPT'
+from pathlib import Path
+p=Path('/etc/apt/sources.list.d/debian.sources')
+lines=p.read_text().splitlines()
+p.write_text('\n'.join(line+' non-free' if line.startswith('Components:') and 'non-free' not in line.split() else line for line in lines)+'\n')
+PYAPT
+else
+  echo 'Expected Debian deb822 sources; enable non-free before provisioning'; exit 1
+fi
+apt-get update
+install -d -m 700 /var/backups/secretary
+apt-get install -y python3-venv python3-dev build-essential nodejs npm jq chromium default-jdk-headless fonts-noto-cjk fonts-dejavu-core libcuda1 nvidia-smi
+for group in video render; do
+  if getent group "$group" >/dev/null; then usermod -aG "$group" secretary; fi
+done
+repo=/srv/secretary/karakeep-tool
+if [ ! -d "$repo/.git" ]; then
+  [ ! -e "$repo" ] || { echo "$repo exists without .git; preserve and reconcile it first"; exit 1; }
+  git clone "$bundle" "$repo"
+  git -c safe.directory="$repo" -C "$repo" remote set-url origin git@github.com:0-0mfuji/Karakeep-tool.git
+fi
+# Refuse local modifications instead of discarding a server-side change.
+[ -z "$(git -c safe.directory="$repo" -C "$repo" status --porcelain --untracked-files=normal)" ] || {
+  echo 'Karakeep worktree has changes; preserve and reconcile them before provisioning'; exit 1;
+}
+git -c safe.directory="$repo" -C "$repo" fetch "$bundle" refs/heads/secretary-release
+# A detached fixed release; local modifications were checked above.
+git -c safe.directory="$repo" -C "$repo" checkout --detach "$KARAKEEP_TOOL_COMMIT"
+python3 -m venv /opt/secretary-tools
+/opt/secretary-tools/bin/pip install -r "$DIR/tooling/requirements-tools.lock"
+python3 -m venv /opt/secretary-plamo
+/opt/secretary-plamo/bin/pip install "torch==$PLAMO_TORCH_VERSION" --index-url https://download.pytorch.org/whl/cu126
+/opt/secretary-plamo/bin/pip install -r "$DIR/tooling/requirements-plamo.lock" --extra-index-url https://download.pytorch.org/whl/cu126
+python3 -m venv /opt/secretary-ocr
+/opt/secretary-ocr/bin/pip install "torch==$PLAMO_TORCH_VERSION" torchvision==0.23.0 --index-url https://download.pytorch.org/whl/cu126
+/opt/secretary-ocr/bin/pip install -r "$DIR/tooling/requirements-ocr.lock" --extra-index-url https://download.pytorch.org/whl/cu126
+# Existing local OCR scripts look for this venv in their data folder.
+install -d -m 700 -o secretary -g secretary "$repo/data/study/work"
+if [ ! -e "$repo/data/study/work/yomitoku-venv" ]; then
+  ln -s /opt/secretary-ocr "$repo/data/study/work/yomitoku-venv"
+fi
+npm install --prefix /opt/secretary-node playwright@1.56.1
+/opt/nanomuse/current/.venv/bin/pip install tomlkit==0.13.3
+if [ "$(cat /opt/secretary/karakeep-cli.version 2>/dev/null || true)" != "$KARAKEEP_CLI_VERSION" ]; then
+  npm install --global --prefix /usr/local "@karakeep/cli@$KARAKEEP_CLI_VERSION"
+  echo "$KARAKEEP_CLI_VERSION" > /opt/secretary/karakeep-cli.version
+fi
+# Create expected local-data paths; checked-out files remain managed by Git.
+for folder in data data/cache data/study books/cache books/final books/out books/out_extra books/out_pg books/out_aozora books/out_zh books/out_zh_all books/luna books/test_zh \
+  epub_out epub_old epub_test state tools/karakeep/recrawl/state tools/karakeep/state \
+  tools/epub/state tools/epub/epub_out tools/dictionaries/german-dict/output; do
+  install -d -m 700 -o secretary -g secretary "$repo/$folder"
+done
+# Legacy utilities also write reports beside their source. Allow directory entries,
+# retain file ownership, and refuse any modified tracked source on the next deploy.
+find "$repo" -type d -not -path "$repo/.git*" -exec chown secretary:secretary {} +
+install -d -m 700 -o secretary -g secretary /home/secretary/.config/secretary/tool-jobs
+install -d -m 755 /var/lib/secretary-models
+install -d -m 700 -o secretary -g secretary /var/lib/secretary-models/cache /var/lib/secretary-models/numba
+# Download at deployment time, pinned revision; no network download during inference.
+/opt/secretary-plamo/bin/python - "$PLAMO_MODEL" "$PLAMO_REVISION" <<'PY'
+from huggingface_hub import snapshot_download
+import sys
+snapshot_download(repo_id=sys.argv[1], revision=sys.argv[2],
+                  local_dir='/var/lib/secretary-models/plamo-3-translate-2b',
+                  ignore_patterns=['*.gguf', '*.md', 'figures/*'])
+from pathlib import Path
+Path('/opt/secretary/plamo.revision').write_text(sys.argv[2]+'\n')
+PY
+for file in secretary-tools.py plamo-translate.py import-tool-data.py; do
+  install -m 644 "$DIR/files/$file" /opt/secretary/
+done
+install -m 644 "$DIR/tooling/catalog.json" /opt/secretary/catalog.json
+install -d -m 700 -o secretary -g secretary /home/secretary/.nanomuse/skills
+# Back up an existing different skill instead of silently replacing custom edits.
+python3 - "$DIR/skills" <<'PY'
+import hashlib, json, os, pathlib, pwd, shutil, tempfile
+source=pathlib.Path(__import__('sys').argv[1]); dest=pathlib.Path('/home/secretary/.nanomuse/skills')
+uid=pwd.getpwnam('secretary').pw_uid; gid=pwd.getpwnam('secretary').pw_gid
+manifest={}
+for skill in sorted(source.iterdir()):
+    if not (skill/'SKILL.md').is_file(): continue
+    target=dest/skill.name
+    if (target/'SKILL.md').exists() and (target/'SKILL.md').read_bytes() != (skill/'SKILL.md').read_bytes():
+        backup=pathlib.Path(tempfile.mkdtemp(prefix='skills-',dir='/var/backups/secretary'))
+        shutil.copytree(target,backup/skill.name)
+    target.mkdir(exist_ok=True,mode=0o700)
+    shutil.copy2(skill/'SKILL.md',target/'SKILL.md')
+    os.chown(target,uid,gid); os.chown(target/'SKILL.md',uid,gid)
+    manifest[skill.name]=hashlib.sha256((skill/'SKILL.md').read_bytes()).hexdigest()
+pathlib.Path('/opt/secretary/skills-manifest.json').write_text(json.dumps(manifest,indent=2))
+PY
+install -m 644 "$DIR/tooling/migrate-config.py" /opt/secretary/migrate-tools-config.py
+/opt/nanomuse/current/.venv/bin/python /opt/secretary/migrate-tools-config.py
+# Python tools load a root .env; shell tools also source it. Generate only validated
+# connection values, never copy a Mac shell configuration or model API keys.
+python3 - "$repo" <<'PY'
+import json, pathlib, re
+repo=pathlib.Path(__import__('sys').argv[1]); cfg=pathlib.Path('/home/secretary/.config/secretary/connections.json')
+item=json.loads(cfg.read_text()).get('karakeep',{}) if cfg.exists() else {}
+if item.get('url') and item.get('key'):
+    if not re.fullmatch(r'https?://[A-Za-z0-9._:/%-]+',item['url']) or not re.fullmatch(r'[A-Za-z0-9._~-]+',item['key']):
+        raise SystemExit('Karakeep connection cannot be safely represented in .env; configure a connector adapter')
+    path=repo/'.env'
+    marker='# managed by secretary/tools-install\n'
+    if path.is_symlink() or path.exists() and not path.read_text().startswith(marker):
+        raise SystemExit('Existing unmanaged Karakeep .env requires reconciliation; it was not overwritten')
+    path.write_text(marker+'URL='+item['url']+'\nAPI_KEY='+item['key']+'\n')
+    import os,pwd
+    os.chmod(path,0o600); os.chown(path,pwd.getpwnam('secretary').pw_uid,pwd.getpwnam('secretary').pw_gid)
+PY
+# Fix only common font paths using Linux-owned symlinks; do not modify checked-out code.
+install -d /System/Library/Fonts
+for name in 'ヒラギノ角ゴシック W6.ttc' 'ヒラギノ角ゴシック W3.ttc' 'ヒラギノ明朝 ProN.ttc' 'Hiragino Sans GB.ttc' 'PingFang.ttc'; do
+  [ -e "/System/Library/Fonts/$name" ] || ln -s /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc "/System/Library/Fonts/$name"
+done
+# Validate configuration with the installed NanoMuse parser and actual skill discovery.
+runuser -u secretary -- /opt/nanomuse/current/.venv/bin/python - <<'PY'
+from nanomuse.config import load_settings
+from nanomuse.skills.library import SkillLibrary
+from pathlib import Path
+import json
+cfg=load_settings('/home/secretary/.nanomuse/config.toml')
+library=SkillLibrary(cfg.skills,cfg.skills_dir)
+expected=json.loads(Path('/opt/secretary/skills-manifest.json').read_text())
+loaded={skill.name for skill in library.enabled()}
+missing=set(expected)-loaded
+if missing or library.errors:
+    raise SystemExit('Skill discovery failed: '+str(sorted(missing))+' '+str(library.errors))
+print('NanoMuse config valid; managed skills loaded:',len(expected))
+PY
+runuser -u secretary -- python3 /opt/secretary/secretary-tools.py doctor

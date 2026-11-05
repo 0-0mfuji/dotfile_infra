@@ -6,9 +6,20 @@ instance="${1:-secretary-dev}"
 [[ "$instance" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]*$ ]] || exit 2
 [ "$#" -le 1 ] || { echo "usage: secretary/provision [instance]" >&2; exit 2; }
 incus exec "$instance" -- cloud-init status --wait
+# Fetch private source on the host using the operator's SSH agent. No key enters the container.
+source "$DIR/versions.env"
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+git init -q "$work/source"
+git -C "$work/source" fetch --depth=1 git@github.com:0-0mfuji/Karakeep-tool.git "$KARAKEEP_TOOL_COMMIT"
+git -C "$work/source" branch secretary-release FETCH_HEAD
+# Bundles cannot contain a shallow prerequisite: obtain complete history for this release.
+git -C "$work/source" fetch --unshallow git@github.com:0-0mfuji/Karakeep-tool.git "$KARAKEEP_TOOL_COMMIT"
+git -C "$work/source" bundle create "$work/karakeep.bundle" refs/heads/secretary-release
 staging="$(incus exec "$instance" -- mktemp -d /tmp/secretary.XXXXXXXX)"
-trap 'incus exec "$instance" -- rm -rf "$staging"' EXIT
+trap 'incus exec "$instance" -- rm -rf "$staging"; rm -rf "$work"' EXIT
 incus file push -r "$DIR" "$instance$staging/"
+incus file push "$work/karakeep.bundle" "$instance$staging/secretary/karakeep.bundle"
 incus exec "$instance" -- bash "$staging/secretary/install"
 
 listen="$(incus config device get "$instance" nanomuse listen 2>/dev/null || true)"

@@ -143,3 +143,12 @@ Macの `dev secretary` でlocalhost:8787の認証付きUIを開く。
 
 秘書をスマホで開く場合は `secretary.nanomuse_port = 8787` と `mobile_bind_ip` を設定し、
 計画を確認してapply後にprovisionを実行する。Macの `dev secretary mobile` でTailnet内専用の認証付きQRを表示する。
+
+## 秘書のローカル翻訳・ツール・スキル
+
+`secretary-dev` にPLaMo翻訳、Karakeep-tool、教材/OCR依存と129のスキルを導入する構成を追加した。
+既存tfvarsのmemory/disk_sizeを16GiB/120GiBに変更し、gpu=trueでplan/apply後に
+`systemd-inhibit --what=sleep --mode=block --why="Secretary setup" ./provision/run secretary-dev` を実行する。
+固定版の私用ソース取得にはサーバー操作者のGitHub SSH認証が必要。鍵はコンテナへ配置しない。
+Macデータの手動転送、適用・検証手順は
+[dotfiles_server/docs/secretary-tools.md](https://github.com/0-0mfuji/dotfiles_server/blob/main/docs/secretary-tools.md) を参照。
