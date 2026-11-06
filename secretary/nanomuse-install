@@ -3,6 +3,7 @@
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || exit 1
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+/usr/bin/python3 "$DIR/tooling/check-idle.py"
 source "$DIR/versions.env"
 id secretary >/dev/null
 [ -x /usr/local/bin/secretary ] || { echo '先に secretary/provision を実行してください' >&2; exit 1; }

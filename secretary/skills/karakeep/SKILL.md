@@ -11,6 +11,8 @@ metadata:
 
 # Karakeep
 
+確認経路: 仕様は `secretary_tools__catalog` / `secretary_tools__inspect`、環境は `secretary_tools__doctor`、原本・保存先のファイル名検索は `secretary_tools__data_files`（`source="repository"` の既定は `directory="data"`、文書は `source="documents"`）を使う。結果が `truncated` ならディレクトリを絞る。本文検索や全件集計は行わないツールなので、件数を総数と解釈しない。準備確認にshellのls/find/grepやrunの--helpを使わない。進捗は専用status、ジョブ待機はjob_statusを使う。専用経路のない実処理は汎用runの通常の承認対象であり、安全扱いに変更しない。
+
 ## Secretary execution tools
 
 Use the dedicated `secretary_tools__karakeep_*` MCP tools described in the Secretary runtime section. The CLI examples below explain arguments; do not execute them through shell. Credentials are managed by the gateway: do not request API keys or read credential files. Reads and typed single-item operations return directly. Plans use `karakeep_plan_status`, not job_status; show pending server-side fetching as pending instead of sleeping in shell.

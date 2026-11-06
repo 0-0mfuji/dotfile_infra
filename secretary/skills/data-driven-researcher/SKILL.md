@@ -5,6 +5,8 @@ description: A methodology for systematic, high-density technical research and k
 
 # Data-Driven Researcher
 
+確認経路: 仕様は `secretary_tools__catalog` / `secretary_tools__inspect`、環境は `secretary_tools__doctor`、原本・保存先のファイル名検索は `secretary_tools__data_files`（`source="repository"` の既定は `directory="data"`、文書は `source="documents"`）を使う。結果が `truncated` ならディレクトリを絞る。本文検索や全件集計は行わないツールなので、件数を総数と解釈しない。準備確認にshellのls/find/grepやrunの--helpを使わない。進捗は専用status、ジョブ待機はjob_statusを使う。専用経路のない実処理は汎用runの通常の承認対象であり、安全扱いに変更しない。
+
 This skill defines a robust, multi-step process for performing exhaustive technical research. It overcomes context window limitations by combining programmatic extraction with tiered AI synthesis.
 
 ## Core Methodology
@@ -17,7 +19,7 @@ Never rely on `read_file` or manual scanning for files over 5MB. Instead, write 
 3.  **Dump**: Redirect output to a local file such as `data/karakeep/analysis/metadata_dump.txt` (this data folder is excluded from Git).
 
 ### Phase 2: Multi-Layered Pattern Filtering
-Use `grep` with regex to filter the harvest results across three levels:
+Use in-memory Python regular expressions on the harvested workspace data to filter across three levels; prefer an existing reviewed extraction tool when available:
 
 - **Broad Filters**: Use generic domain terms (e.g., `physics|geometry|algorithm`).
 - **Niche/Minor Indicators**: Look for patterns like `~lang`, `experimental`, or specific researchers' names known in the field.
@@ -40,7 +42,7 @@ Generate outputs in stages to ensure both breadth and depth:
 ## Design Standards
 
 - **Absolute Coverage**: If the user asks for "all" instances, do not stop at major ones. Use scripts to find the 1% niche cases.
-- **Verification**: If you find a term like "LLVM", perform a targeted `grep` on the raw source data to confirm it's actually there before including it.
+- **Verification**: If you find a term like "LLVM", verify the term against the raw source data using the same scoped extraction workflow to confirm it's actually there before including it.
 - **Categorical Integrity**: Group technologies by their *actual* usage (e.g., placing `mruby/c` in both "Runtimes" and "Embedded" if appropriate).
 
 ## Example Triggers

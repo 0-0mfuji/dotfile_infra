@@ -5,6 +5,8 @@ description: PLaMo 3 Translateで日英・多言語の文章やMarkdown文書を
 
 # ローカルPLaMo翻訳
 
+確認経路: 仕様は `secretary_tools__catalog` / `secretary_tools__inspect`、環境は `secretary_tools__doctor`、原本・保存先のファイル名検索は `secretary_tools__data_files`（`source="repository"` の既定は `directory="data"`、文書は `source="documents"`）を使う。結果が `truncated` ならディレクトリを絞る。本文検索や全件集計は行わないツールなので、件数を総数と解釈しない。準備確認にshellのls/find/grepやrunの--helpを使わない。進捗は専用status、ジョブ待機はjob_statusを使う。専用経路のない実処理は汎用runの通常の承認対象であり、安全扱いに変更しない。
+
 `secretary_tools__translate` を使う。汎用shell/pythonやクラウド翻訳に置き換えない。
 
 - `text` または `input_file` のどちらか一方を指定。ファイルは `/srv/secretary/documents` 内の相対パス。

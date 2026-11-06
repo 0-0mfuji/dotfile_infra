@@ -37,6 +37,13 @@ def migrate(path, backups):
     current = str(agent.get('instructions', ''))
     if progress_route not in current:
         agent['instructions'] = current + '\n' + progress_route
+    discovery_route = ('全スキル共通: ツール仕様はsecretary_tools__catalog/inspect、環境はdoctor、'
+                       '原本や保存先のファイル名検索はdata_files、EPUB検索はlist_epubs、待機はjob_statusを使ってください。'
+                       'これらの準備確認をshellのls/find/grep、--help目的のrun、sleepで代用しないでください。'
+                       '専用ツールがない本文分析や実処理は通常の承認対象です。承認回避のため汎用runを安全扱いしないでください。')
+    current = str(agent.get('instructions', ''))
+    if discovery_route not in current:
+        agent['instructions'] = current + '\n' + discovery_route
     servers = doc.setdefault('mcp', {}).setdefault('servers', [])
     managed = next((s for s in servers if s.get('name') == 'secretary_tools'), None)
     if managed is None:
@@ -46,7 +53,7 @@ def migrate(path, backups):
                        reads_private_data=True, egress=True, call_timeout_s=120.0)
         servers.append(managed)
     policies = managed.setdefault('tools', {})
-    for name in ('catalog', 'inspect', 'job_status', 'doctor', 'narou_status', 'list_epubs', 'study_status'):
+    for name in ('catalog', 'inspect', 'job_status', 'doctor', 'narou_status', 'list_epubs', 'study_status', 'data_files'):
         policies[name] = {'risk': 'safe', 'egress': False}
     for name in ('translate', 'dictionary', 'export_epub', 'gpu_diagnostics'):
         policies[name] = {'risk': 'moderate', 'egress': False}

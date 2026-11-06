@@ -324,6 +324,51 @@ print(json.dumps(d))'''
         return {'ocr_runtime': {}, 'error': type(error).__name__, 'notes': 'Probe failed; do not infer that the host has no GPU.'}
 
 
+def data_files(query='', directory='data', source='repository', limit=20):
+    """Bounded metadata lookup, never a shell or content search."""
+    roots = {'repository': REPO, 'documents': DOCS}
+    if source not in roots or not isinstance(query, str) or len(query) > 200:
+        raise ValueError('invalid source or query')
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError('limit must be 1..100')
+    root = roots[source].resolve()
+    folder = within(root, directory) if directory else root
+    # Hidden credential/cache directories are not a discovery surface.
+    if any(p.startswith('.') for p in folder.relative_to(root).parts):
+        raise ValueError('hidden directories are excluded')
+    found, scanned, truncated = [], 0, False
+    if folder.is_dir():
+        for base, dirs, files in os.walk(folder, followlinks=False):
+            dirs[:] = sorted(d for d in dirs if not d.startswith('.') and
+                             d not in ('node_modules', 'venv', '__pycache__', 'cache') and not d.endswith('-venv'))
+            for name in sorted(files):
+                scanned += 1
+                if scanned > 20000:
+                    truncated = True
+                    break
+                path = Path(base) / name
+                relative = path.relative_to(root).as_posix()
+                if (name.startswith('.') or path.is_symlink() or not path.resolve().is_relative_to(root)
+                        or query.casefold() not in relative.casefold()):
+                    continue
+                try:
+                    info = path.stat()
+                    if not path.is_file():
+                        continue
+                except OSError:
+                    continue
+                if len(found) == limit:
+                    truncated = True
+                    break
+                found.append({'path': relative, 'bytes': info.st_size,
+                              'modified_unix': info.st_mtime, 'source': source})
+            if truncated:
+                break
+    return {'items': found, 'truncated': truncated, 'scanned_entries': min(scanned, 20000),
+            'notes': 'File metadata only; no contents, subprocesses, network or writes. '
+                     'Results are not a total count. Narrow directory/query if truncated.'}
+
+
 def list_epubs(query='', directory='', source='repository', limit=20):
     roots = {'repository': REPO, 'documents': DOCS}
     if source not in roots or not isinstance(query, str) or len(query) > 200:
@@ -537,6 +582,9 @@ def specs():
     args = {'type': 'array', 'items': string, 'maxItems': 100}
     definitions = [
         ('catalog', '利用可能なKarakeepツールと制約を一覧表示する。実行しない。', {}, []),
+        ('data_files', 'データ・文書のファイル名、相対パス、サイズを検索する。本文・隠しファイルは読まず、最大2万項目で停止。shellのfind/ls/grepで保存先を探す代わりに使う。truncatedならdirectoryを絞る。',
+         {'query': string, 'directory': string, 'source': {'type': 'string', 'enum': ['repository', 'documents']},
+          'limit': {'type': 'integer', 'minimum': 1, 'maximum': 100}}, []),
         ('study_status', '医学書・学習教材EPUBの変換進捗、医学/非医学別件数、保存済み停止位置、出力ファイルと現在の空き容量を読む。statusの汎用runやshell探索は不要。変換は起動しない。',
          {'scope': {'type': 'string', 'enum': ['medical', 'nonmedical', 'all']}}, []),
         ('gpu_diagnostics', 'OCR用Pythonの実環境でTorch/CUDA/YomiTokuと小さなGPU計算を確認。隔離shellでGPUなしと誤判定しない。任意コマンドやOCRは実行しない。', {}, []),
@@ -580,6 +628,8 @@ def specs():
 
 
 def invoke(name, args):
+    if name == 'data_files':
+        return data_files(args.get('query', ''), args.get('directory', 'data' if args.get('source', 'repository') == 'repository' else ''), args.get('source', 'repository'), args.get('limit', 20))
     if name == 'study_status':
         return study_status(args.get('scope', 'medical'))
     if name == 'gpu_diagnostics':

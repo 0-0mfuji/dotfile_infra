@@ -23,6 +23,49 @@ def load(name, path):
 tools = load('secretary_tools', ROOT / 'files/secretary-tools.py')
 migration = load('tools_migration', ROOT / 'tooling/migrate-config.py')
 importer = load('data_import', ROOT / 'files/import-tool-data.py')
+idle = load('idle_check', ROOT / 'tooling/check-idle.py')
+
+
+class DiscoveryTests(unittest.TestCase):
+    def test_idle_guard_matches_real_jobs_not_diagnostic_command_strings(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            commands = {
+                '1': ['/usr/bin/python3', '/opt/secretary/secretary-tools.py', 'worker', 'abc'],
+                '2': ['/opt/secretary-tools/bin/python', '-u', '/repo/study/convert_study_materials.py', 'run'],
+                '3': ['/usr/bin/python3', '-c', 'print("convert_study_materials.py")'],
+                '4': ['/usr/bin/python3', '/opt/secretary/secretary-tools.py', 'mcp'],
+            }
+            for pid, argv in commands.items():
+                (root / pid).mkdir()
+                (root / pid / 'cmdline').write_bytes(b'\0'.join(x.encode() for x in argv))
+            self.assertEqual(sorted(idle.active_jobs(root)), ['1', '2'])
+
+    def test_metadata_search_excludes_hidden_symlinks_and_is_bounded(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'data').mkdir()
+            (root / 'data/a.pdf').write_text('private book contents')
+            (root / 'data/b.pdf').write_text('another book')
+            (root / 'data/.secret.pdf').write_text('secret')
+            (root / 'data/link.pdf').symlink_to(root / 'data/a.pdf')
+            with patch.object(tools, 'REPO', root):
+                result = tools.invoke('data_files', {'query': '.pdf', 'limit': 1})
+                self.assertEqual([x['path'] for x in result['items']], ['data/a.pdf'])
+                self.assertTrue(result['truncated'])
+                self.assertNotIn('private book contents', json.dumps(result))
+                result = tools.data_files('.pdf')
+                self.assertEqual(len(result['items']), 2)
+                self.assertFalse(result['truncated'])
+                with self.assertRaises(ValueError):
+                    tools.data_files(directory='../')
+                with self.assertRaises(ValueError):
+                    tools.data_files(limit=True)
+
+    def test_all_managed_skills_route_discovery_to_metadata_tool(self):
+        for skill in (ROOT / 'skills').glob('*/SKILL.md'):
+            with self.subTest(skill=skill.parent.name):
+                self.assertIn('secretary_tools__data_files', skill.read_text())
 
 
 class ConfigTests(unittest.TestCase):
@@ -63,6 +106,8 @@ command = "unchanged"
             import tomlkit
             parsed = tomlkit.parse(config.read_text())
             policies = parsed['mcp']['servers'][-1]['tools']
+            self.assertEqual(policies['data_files']['risk'], 'safe')
+            self.assertFalse(policies['data_files']['egress'])
             self.assertEqual(policies['translate']['risk'], 'moderate')
             self.assertFalse(policies['translate']['egress'])
             self.assertEqual(policies['run']['risk'], 'sensitive')

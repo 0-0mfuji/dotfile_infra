@@ -5,6 +5,8 @@ description: "Native reflow text, font-glyph repair, diagrams and linked origina
 
 # Native reflow text, font-glyph repair, diagrams and linked original appendix.
 
+確認経路: 仕様は `secretary_tools__catalog` / `secretary_tools__inspect`、環境は `secretary_tools__doctor`、原本・保存先のファイル名検索は `secretary_tools__data_files`（`source="repository"` の既定は `directory="data"`、文書は `source="documents"`）を使う。結果が `truncated` ならディレクトリを絞る。本文検索や全件集計は行わないツールなので、件数を総数と解釈しない。準備確認にshellのls/find/grepやrunの--helpを使わない。進捗は専用status、ジョブ待機はjob_statusを使う。専用経路のない実処理は汎用runの通常の承認対象であり、安全扱いに変更しない。
+
 医学書・学習教材の変換状況は `secretary_tools__study_status`（`scope="medical"|"nonmedical"|"all"`）で確認する。GPU可否は `secretary_tools__gpu_diagnostics` を使う。shell/filesの隔離環境からGPUなし・データなしと断定しない。進捗確認に汎用runのstatusやシェル探索を使わず、変換を再開しない。保存記録と現在の実行状態を分け、移行前のMac絶対パスやパス由来のジョブIDは再開前に整合が必要と伝える。
 
 対象: `/srv/secretary/karakeep-tool/study/build_firstaid_epubs.py`

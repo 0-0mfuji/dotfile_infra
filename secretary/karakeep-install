@@ -2,6 +2,7 @@
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || exit 1
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+/usr/bin/python3 "$DIR/tooling/check-idle.py"
 id secretary-karakeep >/dev/null 2>&1 || useradd --system --user-group --home-dir /var/lib/secretary-karakeep --shell /usr/sbin/nologin secretary-karakeep
 broker_gid="$(getent group secretary-karakeep | cut -d: -f3)"
 if [[ " $(id -G secretary) " == *" $broker_gid "* ]]; then
