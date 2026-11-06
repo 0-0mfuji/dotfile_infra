@@ -68,6 +68,81 @@ class DiscoveryTests(unittest.TestCase):
                 self.assertIn('secretary_tools__data_files', skill.read_text())
 
 
+class StudySampleTests(unittest.TestCase):
+    def test_partial_failure_does_not_produce_speed_claim(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            base = root / 'data/study/benchmarks/test'
+            cache = base / 'sample-test/books/book/profile/cache'
+            cache.mkdir(parents=True)
+            (cache / 'p00001.gemini.json').write_text('{}')
+            with patch.object(tools, 'REPO', root):
+                result = tools.study_sample_result(dict(output=str(base), page_count=8, dpi=300, device='cuda'), 30)
+            self.assertFalse(result['measurement_valid'])
+            self.assertIsNone(result['seconds_per_page_including_setup_and_epub'])
+
+    def test_typed_bounds_and_pdf_root(self):
+        with self.assertRaises(ValueError):
+            tools.study_sample('x.pdf', page_count=17)
+        with self.assertRaises(ValueError):
+            tools.study_sample('x.pdf', dpi=250)
+        with self.assertRaises(ValueError):
+            tools.study_sample('x.pdf', first_page=True)
+
+    def test_repeated_request_returns_same_job_without_launching_twice(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / 'data/study').mkdir(parents=True)
+            (root / 'data/study/book.pdf').write_bytes(b'%PDF-test')
+            with patch.object(tools, 'REPO', root), patch.object(tools, 'STATE', root / 'state'), \
+                    patch.object(tools, 'tool_entry'), patch.object(tools, 'active_ocr_processes', return_value=[]), \
+                    patch.object(tools.shutil, 'disk_usage', return_value=SimpleNamespace(free=10 * 1024**3)), \
+                    patch.object(tools, 'start_job', return_value={'job_id': 'a' * 32}) as start:
+                first = tools.study_sample('data/study/book.pdf')
+                second = tools.study_sample('data/study/book.pdf')
+                self.assertFalse(first['reused_request'])
+                self.assertTrue(second['reused_request'])
+                self.assertEqual(first['job_id'], second['job_id'])
+                self.assertEqual(start.call_count, 1)
+                with patch.object(tools, 'active_ocr_processes', return_value=[42]):
+                    with self.assertRaises(ValueError):
+                        tools.study_sample('data/study/book.pdf', first_page=9)
+                with self.assertRaises(ValueError):
+                    tools.study_sample('data/study/../../outside.pdf')
+
+    def test_generic_sample_route_is_rejected(self):
+        for args in (['run', '--pages', '1-8'], ['run', '--pages=1-8']):
+            with self.assertRaises(ValueError):
+                tools.check_legacy_access('study/convert_study_materials.py', args)
+
+    def test_offline_environment_omits_connection_credentials(self):
+        env = tools.child_env(credentials=False)
+        self.assertNotIn('KARAKEEP_API_KEY', env)
+        self.assertNotIn('GEMINI_API_KEY', env)
+        self.assertNotIn('OPENAI_API_KEY', env)
+
+    def test_command_enforces_network_namespace_and_fixed_java(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            study = root / 'data/study'
+            (study / 'work/yomitoku-models').mkdir(parents=True)
+            jar = study / 'japan-medical-licensing/work/qa-tools/epubcheck-5.4.0/epubcheck.jar'
+            jar.parent.mkdir(parents=True)
+            jar.touch()
+            (study / 'book.pdf').touch()
+            output = study / 'benchmarks/test'
+            output.parent.mkdir()
+            request = dict(input_file='data/study/book.pdf', output=str(output), first_page=1,
+                           page_count=8, dpi=300, device='cuda')
+            with patch.object(tools, 'REPO', root), patch.object(tools, 'tool_entry', return_value=({}, root / 'script.py')):
+                command = tools.study_sample_command(request)
+            self.assertIn('--unshare-net', command)
+            self.assertIn('--offline', command)
+            self.assertIn('--input', command)
+            self.assertEqual(command[command.index('--java') + 1], '/usr/bin/java')
+            self.assertNotIn('--book-title', command)
+
+
 class ConfigTests(unittest.TestCase):
     def test_preserves_credentials_rules_and_other_servers_and_is_idempotent(self):
         with tempfile.TemporaryDirectory() as folder:

@@ -69,11 +69,13 @@ def gateway_request(method, path, data=None):
         raise ValueError('Karakeep gateway request failed: ' + type(error).__name__) from None
 
 
-def child_env():
+def child_env(credentials=True):
     env = {'HOME': '/home/secretary', 'PATH': '/opt/secretary-tools/bin:/usr/local/bin:/usr/bin:/bin',
            'LANG': 'C.UTF-8', 'TZ': 'Asia/Tokyo', 'PYTHONUNBUFFERED': '1',
            'XDG_CACHE_HOME': '/srv/secretary/karakeep-tool/data/cache',
            'NODE_PATH': '/opt/secretary-node/node_modules', 'CHROME_PATH': '/usr/bin/chromium'}
+    if not credentials:
+        return env
     if CONFIG.exists():
         item = json.loads(CONFIG.read_text()).get('karakeep', {})
         if item and not item.get('managed_proxy'):
@@ -135,6 +137,10 @@ def check_legacy_access(path, args):
     validate_args(args)
     if args == ['--help']:
         return
+    if path == 'study/convert_study_materials.py' and args and args[0] == 'run' and any(
+        x == '--pages' or x.startswith('--pages=') for x in args
+    ):
+        raise ValueError('Use study_sample for bounded OCR trials; generic parallel sample runs are disabled')
     if path in ('tools/karakeep/sync_nas_pdfs_to_karakeep.py', 'tools/karakeep/recrawl/recrawl.sh') and '--dry-run' not in args:
         raise ValueError('This legacy write batch is restricted to --dry-run; use scoped plans for supported changes')
     if path == 'tools/karakeep/recrawl/manage_list.sh' and (not args or args[0] not in ('status', 'show-list')):
@@ -163,21 +169,30 @@ def job_folder(job):
 def worker(job):
     folder = job_folder(job)
     request = json.loads((folder / 'request.json').read_text())
-    atomic_json(folder / 'status.json', {'state': 'running', 'pid': os.getpid(), 'started': time.time()})
+    started, tick = time.time(), time.monotonic()
+    atomic_json(folder / 'status.json', {'state': 'running', 'pid': os.getpid(), 'started': started})
     lock = None
     try:
-        env = child_env()
-        if request['kind'] == 'translate':
+        env = child_env(credentials=request['kind'] != 'study_sample')
+        if request['kind'] in ('translate', 'study_sample') or request.get('path') == 'study/convert_study_materials.py':
             lock = open(STATE / 'translation.lock', 'a')
             try:
                 fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
-                raise ValueError('another translation is running; retry after it finishes')
+                raise ValueError('another OCR/translation job is running; do not launch retries in parallel')
+            if active_ocr_processes():
+                raise ValueError('an existing OCR process is running; wait before starting another job')
+        if request['kind'] == 'translate':
             command = [PLAMO_PYTHON, str(INSTALL / 'plamo-translate.py')]
             stdin = json.dumps(request).encode()
             timeout = 1800
             env.update(HF_HUB_OFFLINE='1', TRANSFORMERS_OFFLINE='1',
                        HF_HOME='/var/lib/secretary-models/cache', NUMBA_CACHE_DIR='/var/lib/secretary-models/numba')
+        elif request['kind'] == 'study_sample':
+            command = study_sample_command(request)
+            stdin, timeout = None, 900
+            env.update(HF_HUB_OFFLINE='1', TRANSFORMERS_OFFLINE='1', HF_HUB_DISABLE_TELEMETRY='1',
+                       PYTHONDONTWRITEBYTECODE='1')
         elif request['kind'] == 'dictionary':
             _, target = tool_entry(request['path'])
             command = [PYTHON, str(target), request['input'], request['output']]
@@ -208,10 +223,17 @@ def worker(job):
                 os.killpg(proc.pid, signal.SIGKILL)
                 proc.wait()
                 raise TimeoutError('job timed out and its process group was terminated')
-        atomic_json(folder / 'status.json', {'state': 'completed' if proc.returncode == 0 else 'failed',
-                    'exit_code': proc.returncode, 'finished': time.time(), 'output': request.get('output')})
+        result = {'state': 'completed' if proc.returncode == 0 else 'failed',
+                  'exit_code': proc.returncode, 'finished': time.time(), 'started': started,
+                  'elapsed_seconds': round(time.monotonic() - tick, 3), 'output': request.get('output')}
+        if request['kind'] == 'study_sample':
+            result['sample'] = study_sample_result(request, result['elapsed_seconds'])
+            if proc.returncode == 0 and not result['sample']['measurement_valid']:
+                result.update(state='failed', error='Trial did not complete all requested OCR pages and EPUB outputs')
+        atomic_json(folder / 'status.json', result)
     except Exception as exc:
-        atomic_json(folder / 'status.json', {'state': 'failed', 'error': redact(str(exc)), 'finished': time.time()})
+        atomic_json(folder / 'status.json', {'state': 'failed', 'error': redact(str(exc)), 'finished': time.time(),
+                    'started': started, 'elapsed_seconds': round(time.monotonic() - tick, 3)})
     finally:
         if lock:
             lock.close()
@@ -227,6 +249,117 @@ def python_script(argv):
     if not args or args[0].startswith('-'):
         return None, []
     return Path(args[0]).name, args[1:]
+
+
+def active_ocr_processes():
+    found = []
+    for entry in Path('/proc').iterdir():
+        if not entry.name.isdigit():
+            continue
+        try:
+            script, _ = python_script((entry / 'cmdline').read_bytes().split(b'\0'))
+            if script in ('convert_study_materials.py', 'yomitoku_worker.py'):
+                found.append(int(entry.name))
+        except OSError:
+            continue
+    return found
+
+
+def study_sample(input_file, first_page=1, page_count=8, dpi=300, device='cuda'):
+    for value, low, high in ((first_page, 1, 10000), (page_count, 1, 16), (dpi, 200, 300)):
+        if type(value) is not int or not low <= value <= high:
+            raise ValueError('invalid page range or dpi')
+    if dpi not in (200, 300) or device not in ('cuda', 'cpu'):
+        raise ValueError('dpi must be 200/300; device must be cuda/cpu')
+    source = within(REPO, input_file, existing=True)
+    if not source.is_relative_to((REPO / 'data/study').resolve()) or source.suffix.lower() != '.pdf':
+        raise ValueError('input must be a study PDF inside data/study')
+    tool_entry('study/convert_study_materials.py')
+    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    info = source.stat()
+    key = hashlib.sha256(json.dumps([str(source), info.st_size, info.st_mtime_ns,
+                                   first_page, page_count, dpi, device]).encode()).hexdigest()
+    index_path = STATE / 'study-samples.json'
+    with (STATE / 'study-admission.lock').open('a') as admission:
+        fcntl.flock(admission, fcntl.LOCK_EX)
+        index = json.loads(index_path.read_text()) if index_path.exists() else {}
+        if key in index:
+            return {'job_id': index[key], 'reused_request': True,
+                    'status_tool': 'secretary_tools__job_status',
+                    'notes': 'Identical trial already requested; inspect its result instead of restarting.'}
+        if active_ocr_processes():
+            raise ValueError('OCR is already running; wait using job_status, do not launch parallel trials')
+        output = within(REPO, 'data/study/benchmarks/' + uuid.uuid4().hex)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        if shutil.disk_usage(output.parent).free < 3 * 1024 ** 3:
+            raise ValueError('at least 3 GiB free space required for a trial')
+        payload = dict(input_file=str(source.relative_to(REPO.resolve())), first_page=first_page,
+                       page_count=page_count, dpi=dpi, device=device, output=str(output))
+        result = start_job('study_sample', payload)
+        index[key] = result['job_id']
+        atomic_json(index_path, index)
+        return {**result, 'reused_request': False, 'page_count': page_count, 'dpi': dpi,
+                'notes': 'One offline trial only. Wait with job_status; no automatic follow-up trials.'}
+
+
+def study_sample_command(request):
+    _, target = tool_entry('study/convert_study_materials.py')
+    source = within(REPO, request['input_file'], existing=True)
+    output = within(REPO / 'data/study/benchmarks', request['output'])
+    output.mkdir(mode=0o700)
+    models = REPO / 'data/study/work/yomitoku-models'
+    if not models.is_dir():
+        raise ValueError('offline OCR models are not installed')
+    pages = f"{request['first_page']}-{request['first_page'] + request['page_count'] - 1}"
+    jar = REPO / 'data/study/japan-medical-licensing/work/qa-tools/epubcheck-5.4.0/epubcheck.jar'
+    if not jar.is_file() or not Path('/usr/bin/java').is_file():
+        raise ValueError('Linux Java or EPUBCheck is missing; do not skip validation')
+    # A network namespace enforces egress=false, not just an offline CLI flag.
+    # Only the new output and the existing model layout may be written.
+    return ['/usr/local/lib/dev-dsh/bin/bwrap', '--die-with-parent', '--unshare-user',
+            '--unshare-pid', '--unshare-net', '--ro-bind', '/', '/', '--proc', '/proc',
+            '--dev', '/dev', '--tmpfs', '/tmp', '--bind', str(output), str(output),
+            '--bind', str(models), str(models), '--', PYTHON, str(target), 'run',
+            '--input', str(source), '--output', str(output), '--pages', pages,
+            '--engine', 'yomitoku', '--offline', '--yomitoku-python', '/opt/secretary-ocr/bin/python',
+            '--device', request['device'], '--dpi', str(request['dpi']), '--json',
+            '--java', '/usr/bin/java', '--epubcheck-jar', str(jar)]
+
+
+def study_sample_result(request, elapsed):
+    base = Path(request['output'])
+    reports = list(base.glob('sample-*/run-status.json'))
+    saved = json.loads(reports[0].read_text()) if len(reports) == 1 else {}
+    pages = sum(1 for _ in base.glob('sample-*/books/*/*/cache/p*.gemini.json'))
+    epubs = [str(p.resolve().relative_to(REPO.resolve())) for p in sorted(base.glob('sample-*/books/*/*/pages-*/*.epub'))]
+    valid = (saved.get('status') == 'converted_draft' and saved.get('completed_jobs') == 1
+             and not saved.get('errors') and not saved.get('missing')
+             and saved.get('new_pages') == pages == request['page_count'] and len(epubs) == 2)
+    return {'requested_pages': request['page_count'], 'new_ocr_pages': pages,
+            'dpi': request['dpi'], 'device': request['device'], 'run_status': saved,
+            'epubs': epubs, 'measurement_valid': valid,
+            'seconds_per_page_including_setup_and_epub': round(elapsed / pages, 3) if valid else None,
+            'notes': 'Fresh output, no prior OCR cache. Different pages/DPI are not a controlled speedup comparison. '
+                     'EPUB validation does not establish OCR accuracy. Do not automatically extend this trial.'}
+
+
+def recent_study_samples():
+    index = STATE / 'study-samples.json'
+    if not index.is_file():
+        return []
+    result = []
+    for job in list(json.loads(index.read_text()).values())[-5:][::-1]:
+        try:
+            folder = job_folder(job)
+            request = json.loads((folder / 'request.json').read_text())
+            status = json.loads((folder / 'status.json').read_text())
+            result.append({'job_id': job, 'input_file': request['input_file'],
+                           'first_page': request['first_page'], 'page_count': request['page_count'],
+                           'dpi': request['dpi'], 'device': request['device'],
+                           'saved_state': status['state'], 'elapsed_seconds': status.get('elapsed_seconds')})
+        except (OSError, ValueError, KeyError):
+            continue
+    return result
 
 
 def study_status(scope='medical'):
@@ -293,6 +426,7 @@ def study_status(scope='medical'):
             'free_gib_now': round(free / 1024**3, 2),
             'conversion_process_ids': converters, 'ocr_worker_process_ids': workers,
             'related_conversion_process_ids': converters + workers,
+            'recent_sample_jobs': recent_study_samples(),
             'gpu_program_support': {'devices': ['cpu', 'mps', 'cuda', 'auto'], 'default': 'cpu',
                 'cuda_arguments': ['--device', 'cuda', '--yomitoku-python', '/opt/secretary-ocr/bin/python']},
             'notes': 'Counts are planned conversion jobs, not distinct books or original catalog groups. '
@@ -588,6 +722,10 @@ def specs():
         ('study_status', '医学書・学習教材EPUBの変換進捗、医学/非医学別件数、保存済み停止位置、出力ファイルと現在の空き容量を読む。statusの汎用runやshell探索は不要。変換は起動しない。',
          {'scope': {'type': 'string', 'enum': ['medical', 'nonmedical', 'all']}}, []),
         ('gpu_diagnostics', 'OCR用Pythonの実環境でTorch/CUDA/YomiTokuと小さなGPU計算を確認。隔離shellでGPUなしと誤判定しない。任意コマンドやOCRは実行しない。', {}, []),
+        ('study_sample', '学習教材PDFの速度確認用に1〜16ページだけ新規OCRしEPUBを作成・検査する。既定8ページ・300dpi・CUDA。オフライン、1ジョブ、既存出力を保持。同条件の重複要求は既存job_idを返す。追加試験や並列試験を自動起動しない。',
+         {'input_file': string, 'first_page': {'type': 'integer', 'minimum': 1, 'maximum': 10000},
+          'page_count': {'type': 'integer', 'minimum': 1, 'maximum': 16},
+          'dpi': {'type': 'integer', 'enum': [200, 300]}, 'device': {'type': 'string', 'enum': ['cuda', 'cpu']}}, ['input_file']),
         ('list_epubs', 'ローカルEPUBの一覧・検索。ファイル名、保存先、サイズと既知のなろう作品名だけを返す。本文は読まない。ダウンロード対象の保存先探しに使い、shell検索をしない。',
          {'query': string, 'directory': string, 'source': {'type': 'string', 'enum': ['repository', 'documents']},
           'limit': {'type': 'integer', 'minimum': 1, 'maximum': 100}}, []),
@@ -628,6 +766,9 @@ def specs():
 
 
 def invoke(name, args):
+    if name == 'study_sample':
+        return study_sample(args['input_file'], args.get('first_page', 1), args.get('page_count', 8),
+                            args.get('dpi', 300), args.get('device', 'cuda'))
     if name == 'data_files':
         return data_files(args.get('query', ''), args.get('directory', 'data' if args.get('source', 'repository') == 'repository' else ''), args.get('source', 'repository'), args.get('limit', 20))
     if name == 'study_status':

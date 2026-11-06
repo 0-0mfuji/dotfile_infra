@@ -44,6 +44,15 @@ def migrate(path, backups):
     current = str(agent.get('instructions', ''))
     if discovery_route not in current:
         agent['instructions'] = current + '\n' + discovery_route
+    trial_route = ('速度測定・お試しOCRはstudy_sampleで1ジョブだけ実施し、job_statusで完了を確認して報告してください。'
+                   '「どうですか」は状況確認であり、追加試験の許可ではありません。'
+                   '並列数・DPI・ページ範囲を増やす追加実験、失敗後の無制限再試行はしないでください。'
+                   '比較は同じページ・同じDPI・新規OCR件数と成功を確認してから行い、失敗・キャッシュ再利用を速度向上と扱わないでください。'
+                   'ツール回数上限に近づいたら新規処理を開始せず、実施内容・job_id・確認済み結果・未完了を保存して報告してください。'
+                   '上限到達や要約後に作業履歴を失った場合、未実施と断定せずstudy_statusのrecent_sample_jobsからjob_idを回復しjob_statusを確認してください。')
+    current = str(agent.get('instructions', ''))
+    if trial_route not in current:
+        agent['instructions'] = current + '\n' + trial_route
     servers = doc.setdefault('mcp', {}).setdefault('servers', [])
     managed = next((s for s in servers if s.get('name') == 'secretary_tools'), None)
     if managed is None:
@@ -55,7 +64,7 @@ def migrate(path, backups):
     policies = managed.setdefault('tools', {})
     for name in ('catalog', 'inspect', 'job_status', 'doctor', 'narou_status', 'list_epubs', 'study_status', 'data_files'):
         policies[name] = {'risk': 'safe', 'egress': False}
-    for name in ('translate', 'dictionary', 'export_epub', 'gpu_diagnostics'):
+    for name in ('translate', 'dictionary', 'export_epub', 'gpu_diagnostics', 'study_sample'):
         policies[name] = {'risk': 'moderate', 'egress': False}
     # A fixed CLI against the configured user's own Karakeep; callers cannot select
     # another endpoint. Egress is mediated here, not arbitrary subprocess networking.

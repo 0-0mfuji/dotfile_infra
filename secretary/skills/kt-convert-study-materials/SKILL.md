@@ -15,16 +15,19 @@ EPUBを作成・提供する依頼では、完成後に `secretary_tools__export
 
 1. `secretary_tools__inspect` に `path="study/convert_study_materials.py"` を渡し、ソースの引数・既定値・入出力・必要データを読む。ヘルプ非対応で実処理が始まるスクリプトもあるため、最初から実行しない。
 2. ユーザーの指定した原本・件数・保存先に限定する。教材原本や既存EPUBを保全し、新しい出力先または対応するdry-run/planを使う。SDカード・NAS・ファームウェア・別repoが必要なら不足を具体的に示す。
-3. `secretary_tools__run` に上記の `path` と文字列配列 `args` を渡す。返るjob IDを `secretary_tools__job_status(job_id=..., wait_seconds=45)` で確認し、終了・成果物・欠落を報告する。外部更新や削除は対象を示してツールの承認を受け、同じ依頼の重複確認はしない。
+3. 速度確認・見本変換は `secretary_tools__study_sample(input_file="data/study/...pdf", first_page=1, page_count=8, dpi=300, device="cuda")` を1回だけ使う。input_fileはdata_filesで確認した相対パス。1回1〜16ページに限定し、新しい出力先、オフラインOCR、Linux Java、EPUB検査はツールが固定する。汎用runに--pagesを渡さない。300dpiを既定に保ち、200dpiへの変更は品質差を伴うので依頼がある場合だけ行う。
+4. 返るjob_idを `secretary_tools__job_status(job_id=..., wait_seconds=45)` で待つ。完了後、elapsed_seconds、新規OCRページ数、DPI、成否を報告する。秒/ページにはモデル読込・EPUB作成と検査を含む。同条件の重複要求は既存job_idを返すので、再実行せず既存結果を確認する。
+5. 「どうですか」は進捗確認。新しい試験や再試行を開始しない。最初の測定1件で結果を返し、並列数を2→4→6→8と自動拡大しない。OOM、引数エラー、入力不足、ツール上限で停止したら、その状態・job_id・完了分を報告する。追加実験はユーザーが具体的に依頼した範囲に限定する。
+6. 速度比較は同じページ・DPI・新規キャッシュ・成功をそろえる。別ページの処理時間、キャッシュ再利用、並列ジョブの一部失敗から倍率を断定しない。EPUBCheck合格はOCR精度の保証ではない。
+7. 全冊変換・正式再開は試験とは別の依頼。旧Mac絶対パスと出力IDの整合を確認後、ソース仕様に沿って汎用runを使う通常の承認対象。既存ジョブとGPU翻訳を並列実行しない。外部AIへ勝手に切り替えない。
 
-queued/runningなら同じjob_statusで再確認する。待機のためにshellのsleepや汎用Pythonを使わない。completedを確認してから成果物を報告し、失敗・中断を成功扱いしない。
-4. OCRが必要なら `--yomitoku-python /opt/secretary-ocr/bin/python --device cuda` が対象ツールに対応するか確認する。PLaMo翻訳とのGPU同時実行を避ける。外部AIは別の認証・料金・通信が発生するため、ローカル処理から勝手に切り替えない。
+ツール呼出し上限に近づいたら追加処理を開始せず、job_id・条件・完了分・未完了を短い進捗文書へ保存する。履歴が不明でも「未実施」「依頼なし」と断定せず、study_statusのrecent_sample_jobsからjob_idを回復し、job_statusを確認する。
 
 制約:
 - 必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない
 - Mac固有パスあり。引数または環境変数でLinux用に変更できることを確認する
 
-引数候補: --book-title, --catalog, --confidence, --device, --dpi, --engine, --epubcheck-jar, --gemini-models, --input, --java, --json, --max-new-pages, --min-free-gib, --no-preview, --offline, --output, --pages, --scope, --tesseract, --title, --volume-pages, --yomitoku-python
+引数候補: --book-title, --catalog, --confidence, --device, --dpi, --engine, --epubcheck-jar, --gemini-models, --input, --java, --json, --max-new-pages, --min-free-gib, --offline, --output, --pages, --scope, --tesseract, --title, --volume-pages, --yomitoku-python
 
 ソースの説明:
 

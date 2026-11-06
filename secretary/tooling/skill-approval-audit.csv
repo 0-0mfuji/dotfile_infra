@@ -41,7 +41,7 @@ kt-cleanup-sd-duplicates,study/cleanup_sd_duplicates.py,data_files/catalog/inspe
 kt-compare-english-ocr,study/compare_english_ocr.py,data_files/catalog/inspect/doctor,generic_run,job_status,retained
 kt-convert-all-study-shell,study/convert_all_study.sh,data_files/catalog/inspect/doctor,generic_run,job_status,retained
 kt-convert-dictcc,tools/dictionaries/german-dict/convert_dictcc.py,data_files/catalog/inspect/doctor,generic_run,job_status,retained
-kt-convert-study-materials,study/convert_study_materials.py,data_files/catalog/inspect/doctor,generic_run,job_status,retained
+kt-convert-study-materials,study/convert_study_materials.py,data_files/catalog/inspect/doctor,typed_sample_and_generic_full_run,job_status,per_operation
 kt-convert-wadoku,tools/dictionaries/german-dict/convert_wadoku.py,data_files/catalog/inspect/doctor,generic_run,job_status,retained
 kt-copy-imported-to-sd,study/copy_imported_to_sd.py,data_files/catalog/inspect/doctor,generic_run,job_status,retained
 kt-copy-medical-library-to-sd,study/copy_medical_library_to_sd.py,data_files/catalog/inspect/doctor,generic_run,job_status,retained
