@@ -69,6 +69,24 @@ class DiscoveryTests(unittest.TestCase):
 
 
 class StudySampleTests(unittest.TestCase):
+    def test_busy_gpu_lock_prevents_worker_subprocess_and_preserves_timing(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            job = 'b' * 32
+            (root / job).mkdir()
+            (root / job / 'request.json').write_text(json.dumps({'kind': 'study_sample'}))
+            with (root / 'translation.lock').open('a') as held:
+                tools.fcntl.flock(held, tools.fcntl.LOCK_EX | tools.fcntl.LOCK_NB)
+                with patch.object(tools, 'STATE', root), patch.object(tools, 'child_env', return_value={}), \
+                        patch.object(tools.subprocess, 'Popen') as spawn:
+                    tools.worker(job)
+                spawn.assert_not_called()
+            status = json.loads((root / job / 'status.json').read_text())
+            self.assertEqual(status['state'], 'failed')
+            self.assertIn('another OCR/translation job', status['error'])
+            self.assertIn('started', status)
+            self.assertIn('elapsed_seconds', status)
+
     def test_partial_failure_does_not_produce_speed_claim(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder).resolve()
