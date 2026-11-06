@@ -1,0 +1,24 @@
+diff --git a/novel_downloader.py b/novel_downloader.py
+index 95cdc5f..a6c47c8 100644
+--- a/novel_downloader.py
++++ b/novel_downloader.py
+@@ -4124,7 +4124,18 @@ def narou_get_all_episodes(base_url: str, ncode: str, index_wait: float = 1.0) -
+     while True:
+         url  = f"{base_url}?p={page}" if page > 1 else base_url
+         print(f"  目次 p.{page} 取得: {url}")
+-        html = narou_fetch(url)
++        try:
++            html = narou_fetch(url)
++        except HTTPError as exc:
++            # 100話の倍数で終わる作品は、次ページが空の目次ではなく404になる。
++            # APIの総話数との一致が確認できる場合だけ正常な終端とみなす。
++            # 初ページ・途中ページ・API未取得時の404を隠さない。
++            expected = (meta or {}).get("episode_count")
++            if (exc.code == 404 and page > 1 and expected
++                    and len(all_eps) == expected):
++                print("  [情報] API総話数まで取得済みのため、次ページの404を目次の終端として扱います。")
++                break
++            raise
+         if page == 1:
+             first_html = html
+ 

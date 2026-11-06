@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Install the reviewed external downloader without restarting any AI/OCR service.
+set -euo pipefail
+[ "$(id -u)" -eq 0 ] || exit 1
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DIR/versions.env"
+repo=/srv/secretary/karakeep-tool
+target="$repo/novel_downloader"
+base=/opt/secretary/novel-downloader
+release="$base/$NOVEL_DOWNLOADER_COMMIT-${NOVEL_DOWNLOADER_PATCHED_SHA256:0:12}"
+[ -f "$repo/books/narou_library.py" ] || { echo 'Install Karakeep-tool first'; exit 1; }
+if [ -e "$target" ] || [ -L "$target" ]; then
+  if [ ! -L "$target" ] || [[ "$(readlink "$target")" != "$base/"* ]]; then
+    echo 'Unmanaged novel_downloader directory preserved; reconcile before installing' >&2
+    exit 1
+  fi
+fi
+/usr/bin/python3 - <<'PY'
+from pathlib import Path
+for p in Path('/proc').glob('[0-9]*/cmdline'):
+    try:
+        args = [x.decode(errors='replace') for x in p.read_bytes().split(b'\0') if x]
+    except OSError:
+        continue
+    if len(args) < 2 or not Path(args[0]).name.startswith('python'):
+        continue
+    if any(Path(x).name == 'novel_downloader.py' for x in args[1:3]) or (
+        any(Path(x).name == 'narou_library.py' for x in args[1:3]) and '--execute' in args
+    ):
+        raise SystemExit('An acquisition is running; leave its dependency untouched')
+PY
+work="$(mktemp -d)"
+temporary_link="$target.new.$$"
+trap 'rm -rf "$work"; rm -f "$temporary_link"' EXIT
+if [ ! -d "$release" ]; then
+  url="https://raw.githubusercontent.com/ayati/novel_downloader/$NOVEL_DOWNLOADER_COMMIT"
+  curl -fsSL --proto '=https' --tlsv1.2 "$url/novel_downloader.py" -o "$work/novel_downloader.py"
+  curl -fsSL --proto '=https' --tlsv1.2 "$url/LICENSE.md" -o "$work/LICENSE.md"
+  echo "$NOVEL_DOWNLOADER_SOURCE_SHA256  $work/novel_downloader.py" | sha256sum -c -
+  echo "$NOVEL_DOWNLOADER_LICENSE_SHA256  $work/LICENSE.md" | sha256sum -c -
+  git -C "$work" apply --check "$DIR/files/novel-downloader-narou-pagination.patch"
+  git -C "$work" apply "$DIR/files/novel-downloader-narou-pagination.patch"
+  echo "$NOVEL_DOWNLOADER_PATCHED_SHA256  $work/novel_downloader.py" | sha256sum -c -
+  /opt/secretary-tools/bin/python "$work/novel_downloader.py" --version
+  install -d -m 755 -o root -g root "$base"
+  stage="$(mktemp -d "$base/.release.XXXXXXXX")"
+  install -m 644 "$work/novel_downloader.py" "$work/LICENSE.md" "$stage/"
+  chmod 755 "$stage"
+  mv "$stage" "$release"
+fi
+echo "$NOVEL_DOWNLOADER_PATCHED_SHA256  $release/novel_downloader.py" | sha256sum -c -
+echo "$NOVEL_DOWNLOADER_LICENSE_SHA256  $release/LICENSE.md" | sha256sum -c -
+ln -s "$release" "$temporary_link"
+mv -Tf "$temporary_link" "$target"
+echo 'Installed novel_downloader v2.21.0 with verified Narou pagination patch. Existing data was not modified.'

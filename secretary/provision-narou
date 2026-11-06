@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Apply this dependency component on the host; leave ongoing study OCR running.
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[ "$#" -eq 0 ] || { echo 'usage: secretary/provision-narou' >&2; exit 2; }
+instance=secretary-dev
+staging="$(incus exec "$instance" -- mktemp -d /tmp/secretary-narou.XXXXXXXX)"
+trap 'incus exec "$instance" -- rm -rf "$staging"' EXIT
+incus exec "$instance" -- mkdir "$staging/files"
+incus file push "$DIR/narou-install" "$DIR/versions.env" "$instance$staging/"
+incus file push "$DIR/files/novel-downloader-narou-pagination.patch" "$instance$staging/files/"
+incus exec "$instance" -- bash "$staging/narou-install"

@@ -52,6 +52,7 @@ git -c safe.directory="$repo" -C "$repo" fetch "$bundle" refs/heads/secretary-re
 git -c safe.directory="$repo" -C "$repo" checkout --detach "$KARAKEEP_TOOL_COMMIT"
 python3 -m venv /opt/secretary-tools
 /opt/secretary-tools/bin/pip install -r "$DIR/tooling/requirements-tools.lock"
+bash "$DIR/narou-install"
 python3 -m venv /opt/secretary-plamo
 /opt/secretary-plamo/bin/pip install "torch==$PLAMO_TORCH_VERSION" --index-url https://download.pytorch.org/whl/cu126
 /opt/secretary-plamo/bin/pip install -r "$DIR/tooling/requirements-plamo.lock" --extra-index-url https://download.pytorch.org/whl/cu126
