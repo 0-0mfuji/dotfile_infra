@@ -5,6 +5,8 @@ description: "Twitter再クロール結果を確認し進捗を更新する。Ka
 
 # Twitter再クロール結果を確認し進捗を更新する
 
+EPUBを作成・提供する依頼では、完成後に `secretary_tools__export_epub` を使う。`path` はKarakeep-toolからの相対パス（文書領域なら `source="documents"`）。保存先が不明なら `secretary_tools__list_epubs` で探し、shellのfind/lsを使わない。返る `workspace_path` を成果物として案内し、NanoMuseではカードを開いてダウンロードできると伝える。本文を会話に読み込まず、URLやボタンを捏造しない。進捗確認だけの依頼では実行しない。
+
 Karakeep接続は制限付きgatewayを使う。参照・dry-runは継続できるが、このスクリプトの生API/CLIによる更新・削除は拒否される。記事登録は `secretary_tools__karakeep_create`、タグ整理は `secretary_tools__karakeep_tags`、削除・一括更新は専用計画ツールを使い、返る管理者確認コマンドをユーザーへ示す。NASアップロード・再クロール・リスト同期のような未対応の書込バッチを、直接実行できると案内しない。検証済み計画経路を実装するまでdry-run/参照にとどめる。
 
 対象は `tools/karakeep/recrawl/check_status.sh`。ソースは固定コミットの `/srv/secretary/karakeep-tool` にある。

@@ -38,9 +38,9 @@ def migrate(path, backups):
                        reads_private_data=True, egress=True, call_timeout_s=120.0)
         servers.append(managed)
     policies = managed.setdefault('tools', {})
-    for name in ('catalog', 'inspect', 'job_status', 'doctor', 'narou_status'):
+    for name in ('catalog', 'inspect', 'job_status', 'doctor', 'narou_status', 'list_epubs'):
         policies[name] = {'risk': 'safe', 'egress': False}
-    for name in ('translate', 'dictionary'):
+    for name in ('translate', 'dictionary', 'export_epub'):
         policies[name] = {'risk': 'moderate', 'egress': False}
     # A fixed CLI against the configured user's own Karakeep; callers cannot select
     # another endpoint. Egress is mediated here, not arbitrary subprocess networking.

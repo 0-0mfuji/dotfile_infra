@@ -5,6 +5,8 @@ description: "小説家になろうの取得進捗・完了数・途中保存・
 
 # 公式APIの人気作品候補と、明示実行する逐次EPUB取得コマンド。Python 3.10+。
 
+EPUBを作成・提供する依頼では、完成後に `secretary_tools__export_epub` を使う。`path` はKarakeep-toolからの相対パス（文書領域なら `source="documents"`）。保存先が不明なら `secretary_tools__list_epubs` で探し、shellのfind/lsを使わない。返る `workspace_path` を成果物として案内し、NanoMuseではカードを開いてダウンロードできると伝える。本文を会話に読み込まず、URLやボタンを捏造しない。進捗確認だけの依頼では実行しない。
+
 ## 進捗を知りたい場合
 
 最初に `secretary_tools__narou_status` を引数なしで呼ぶ。job IDは不要。候補数、completed_candidates、partialの保存話数、last_batch_record、running_process_idsを使って回答する。

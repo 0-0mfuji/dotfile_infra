@@ -5,6 +5,8 @@ description: "教材・書籍処理: ocr image server。Karakeep-toolの study/o
 
 # 教材・書籍処理: ocr image server
 
+EPUBを作成・提供する依頼では、完成後に `secretary_tools__export_epub` を使う。`path` はKarakeep-toolからの相対パス（文書領域なら `source="documents"`）。保存先が不明なら `secretary_tools__list_epubs` で探し、shellのfind/lsを使わない。返る `workspace_path` を成果物として案内し、NanoMuseではカードを開いてダウンロードできると伝える。本文を会話に読み込まず、URLやボタンを捏造しない。進捗確認だけの依頼では実行しない。
+
 対象: `/srv/secretary/karakeep-tool/study/ocr_image_server.swift`
 
 1. `secretary_tools__inspect` に `path="study/ocr_image_server.swift"` を渡し、ソースの引数・既定値・入出力・必要データを読む。ヘルプ非対応で実処理が始まるスクリプトもあるため、最初から実行しない。

@@ -5,6 +5,8 @@ description: "Internet Archiveの医学書を調査する。Karakeep-toolの boo
 
 # Internet Archiveの医学書を調査する
 
+EPUBを作成・提供する依頼では、完成後に `secretary_tools__export_epub` を使う。`path` はKarakeep-toolからの相対パス（文書領域なら `source="documents"`）。保存先が不明なら `secretary_tools__list_epubs` で探し、shellのfind/lsを使わない。返る `workspace_path` を成果物として案内し、NanoMuseではカードを開いてダウンロードできると伝える。本文を会話に読み込まず、URLやボタンを捏造しない。進捗確認だけの依頼では実行しない。
+
 対象は `books/medical_ia_search.py`。ソースは固定コミットの `/srv/secretary/karakeep-tool` にある。
 
 1. `secretary_tools__inspect` に `path="books/medical_ia_search.py"` を渡し、最新の導入状態、ソース、引数、必要データを確認する。`--help` を実行するだけで処理が走るツールもあるので、最初はソースを読む。

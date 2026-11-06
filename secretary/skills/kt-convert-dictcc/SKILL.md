@@ -5,6 +5,8 @@ description: "dict.ccの独英データをStarDict辞書に変換する。Karake
 
 # dict.ccの独英データをStarDict辞書に変換する
 
+EPUBを作成・提供する依頼では、完成後に `secretary_tools__export_epub` を使う。`path` はKarakeep-toolからの相対パス（文書領域なら `source="documents"`）。保存先が不明なら `secretary_tools__list_epubs` で探し、shellのfind/lsを使わない。返る `workspace_path` を成果物として案内し、NanoMuseではカードを開いてダウンロードできると伝える。本文を会話に読み込まず、URLやボタンを捏造しない。進捗確認だけの依頼では実行しない。
+
 対象は `tools/dictionaries/german-dict/convert_dictcc.py`。ソースは固定コミットの `/srv/secretary/karakeep-tool` にある。
 
 変換にはまず `secretary_tools__dictionary` を使う。`kind="dictcc"`、`input_file` はKarakeep-toolの `data/` からの相対パス。出力は専用の新規ディレクトリになり、通常は追加承認なしで実行できる。独自の追加オプションが必要な場合のみ以下の汎用実行を使う。

@@ -165,6 +165,67 @@ class ToolBoundaryTests(unittest.TestCase):
         self.assertEqual(tools.validate_args(['$(not-a-command)', 'value with spaces']), ['$(not-a-command)', 'value with spaces'])
 
 
+class EpubExportTests(unittest.TestCase):
+    def test_listing_is_bounded_metadata_only_and_uses_narou_titles(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repo = Path(folder); novels = repo / 'data/novels'; novels.mkdir(parents=True)
+            (novels / 'candidates.json').write_text(json.dumps({'works': [{'ncode': 'n0001aa', 'title': '選ぶ作品'}]}))
+            (novels / 'n0001aa.epub').write_bytes(b'not-read-as-book-contents')
+            (repo / 'other.epub').write_bytes(b'other')
+            (repo / 'link.epub').symlink_to(repo.parent / 'private.epub')
+            with patch.object(tools, 'REPO', repo):
+                result = tools.list_epubs(query='選ぶ')
+                bounded = tools.list_epubs(limit=1)
+                with self.assertRaises(ValueError):
+                    tools.list_epubs(directory='../')
+            self.assertEqual(result['total_matches'], 1)
+            self.assertEqual(result['items'][0]['path'], 'data/novels/n0001aa.epub')
+            self.assertNotIn('not-read-as-book-contents', json.dumps(result))
+            self.assertTrue(bounded['truncated'])
+            self.assertEqual(len(bounded['items']), 1)
+
+    def make_book(self, path):
+        with zipfile.ZipFile(path, 'w') as archive:
+            archive.writestr('mimetype', 'application/epub+zip')
+            archive.writestr('content.txt', 'test-book-content')
+
+    def test_exports_new_private_workspace_files_without_changing_original(self):
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder); repo = base / 'repo'; docs = base / 'docs'
+            repo.mkdir(); docs.mkdir(); original = repo / '日本語.epub'; self.make_book(original)
+            data = original.read_bytes()
+            with patch.object(tools, 'REPO', repo), patch.object(tools, 'DOCS', docs):
+                first = tools.invoke('export_epub', {'path': original.name})
+                second = tools.invoke('export_epub', {'path': original.name})
+                third = tools.invoke('export_epub', {'path': first['workspace_path'], 'source': 'documents'})
+            self.assertEqual(original.read_bytes(), data)
+            self.assertEqual(len({x['workspace_path'] for x in (first, second, third)}), 3)
+            for result in (first, second, third):
+                target = docs / result['workspace_path']
+                self.assertEqual(target.read_bytes(), data)
+                self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+                self.assertEqual(result['sha256'], hashlib.sha256(data).hexdigest())
+                self.assertNotIn('test-book-content', json.dumps(result))
+            self.assertFalse(list(docs.rglob('.epub-partial')))
+
+    def test_rejects_other_files_escape_and_corrupt_epubs(self):
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder); repo = base / 'repo'; docs = base / 'docs'
+            repo.mkdir(); docs.mkdir()
+            (repo / 'secret.txt').write_text('private')
+            (base / 'outside.epub').write_bytes(b'private')
+            (repo / 'link.epub').symlink_to(base / 'outside.epub')
+            self.make_book(repo / 'broken.epub')
+            data = (repo / 'broken.epub').read_bytes().replace(b'test-book-content', b'bad!-book-content')
+            (repo / 'broken.epub').write_bytes(data)
+            with patch.object(tools, 'REPO', repo), patch.object(tools, 'DOCS', docs):
+                for name in ('secret.txt', '../outside.epub', 'link.epub', 'broken.epub'):
+                    with self.assertRaises(ValueError):
+                        tools.export_epub(name)
+            self.assertFalse(list(docs.rglob('*.epub')))
+            self.assertFalse(list(docs.rglob('.epub-partial')))
+
+
 class NarouStatusTests(unittest.TestCase):
     def test_counts_legacy_and_current_epubs_and_saved_episodes_without_execution(self):
         with tempfile.TemporaryDirectory() as folder:

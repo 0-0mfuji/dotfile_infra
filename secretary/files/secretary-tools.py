@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import re
 import signal
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -216,6 +217,104 @@ def worker(job):
             lock.close()
 
 
+def list_epubs(query='', directory='', source='repository', limit=20):
+    roots = {'repository': REPO, 'documents': DOCS}
+    if source not in roots or not isinstance(query, str) or len(query) > 200:
+        raise ValueError('invalid source or query')
+    if type(limit) is not int or not 1 <= limit <= 100:
+        raise ValueError('limit must be 1..100')
+    root = roots[source].resolve()
+    folder = within(root, directory) if directory else root
+    if not folder.is_dir():
+        return {'items': [], 'total_matches': 0, 'truncated': False}
+    titles = {}
+    manifest = REPO / 'data/novels/candidates.json'
+    if source == 'repository' and manifest.is_file() and not manifest.is_symlink() and manifest.resolve().is_relative_to(root) and manifest.stat().st_size <= 16 * 1024 * 1024:
+        try:
+            titles = {w['ncode'].lower(): str(w.get('title', ''))[:200]
+                      for w in json.loads(manifest.read_text()).get('works', [])}
+        except (OSError, ValueError, KeyError, TypeError):
+            titles = {}
+    found = []
+    for base, dirs, files in os.walk(folder, followlinks=False):
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ('node_modules', 'venv', '__pycache__') and not d.endswith('-venv')]
+        for name in files:
+            if name.startswith('.') or not name.lower().endswith('.epub'):
+                continue
+            path = Path(base) / name
+            if path.is_symlink() or not path.resolve().is_relative_to(root):
+                continue
+            try:
+                info = path.stat()
+            except FileNotFoundError:
+                continue
+            relative = path.relative_to(root).as_posix()
+            title = titles.get(path.stem.lower(), '') if relative.startswith('data/novels/') else ''
+            if query.casefold() not in (relative + ' ' + title).casefold():
+                continue
+            found.append({'path': relative, 'filename': name, 'title': title, 'bytes': info.st_size,
+                          'modified_unix': info.st_mtime, 'source': source})
+    found.sort(key=lambda x: (-x['modified_unix'], x['path']))
+    return {'items': found[:limit], 'total_matches': len(found), 'truncated': len(found) > limit,
+            'notes': 'Metadata only. Use export_epub to validate and prepare a selected file; no book contents were read.'}
+
+
+def export_epub(path, source='repository'):
+    """Prepare one validated local EPUB for the existing authenticated workspace UI."""
+    roots = {'repository': REPO, 'documents': DOCS}
+    if source not in roots:
+        raise ValueError('source must be repository or documents')
+    original = within(roots[source], path, existing=True)
+    if original.suffix.lower() != '.epub':
+        raise ValueError('only EPUB files can be prepared for download')
+    downloads = within(DOCS, 'downloads')
+    downloads.mkdir(parents=True, exist_ok=True, mode=0o700)
+    folder = Path(tempfile.mkdtemp(prefix='epub-', dir=downloads))
+    name = original.name if not original.name.startswith('.') else 'book-' + original.name.lstrip('.')
+    target = folder / name
+    temporary = folder / '.epub-partial'
+    try:
+        with original.open('rb') as incoming:
+            before = os.fstat(incoming.fileno())
+            if before.st_size > 1024**3:
+                raise ValueError('EPUB exceeds the 1 GiB download preparation limit')
+            if shutil.disk_usage(downloads).free < before.st_size + 1024**3:
+                raise ValueError('insufficient space; keep at least 1 GiB free')
+            with zipfile.ZipFile(incoming) as archive:
+                entries = archive.infolist()
+                if len(entries) > 10000 or sum(i.file_size for i in entries) > 4 * 1024**3:
+                    raise ValueError('EPUB expanded size or entry count exceeds the validation limit')
+                with archive.open('mimetype') as stream:
+                    if stream.read(64) != b'application/epub+zip':
+                        raise ValueError('not a valid EPUB container')
+                if archive.testzip() is not None:
+                    raise ValueError('EPUB checksum validation failed')
+            incoming.seek(0)
+            digest = hashlib.sha256()
+            copied = 0
+            with temporary.open('xb') as output:
+                os.chmod(temporary, 0o600)
+                for block in iter(lambda: incoming.read(4 * 1024 * 1024), b''):
+                    copied += len(block)
+                    if copied > before.st_size:
+                        raise ValueError('EPUB is still growing; wait until creation finishes')
+                    output.write(block); digest.update(block)
+            after = os.fstat(incoming.fileno())
+            current = original.stat()
+            if copied != before.st_size or (before.st_size, before.st_mtime_ns, before.st_ino) != (after.st_size, after.st_mtime_ns, after.st_ino) or (
+                current.st_ino, current.st_size, current.st_mtime_ns) != (before.st_ino, before.st_size, before.st_mtime_ns):
+                raise ValueError('EPUB changed while being prepared; wait until creation finishes')
+        os.link(temporary, target)
+        temporary.unlink()
+        relative = target.relative_to(DOCS.resolve()).as_posix()
+        return {'workspace_path': relative, 'filename': target.name, 'bytes': before.st_size,
+                'sha256': digest.hexdigest(),
+                'delivery': 'Show this workspace file as the EPUB artifact. In NanoMuse, open its artifact card and use Download. Do not invent URLs or read the book into chat.'}
+    except Exception:
+        shutil.rmtree(folder)
+        raise
+
+
 def narou_status():
     """Read the fixed local library; never run a downloader or access the network."""
     root = within(REPO, 'data/novels')
@@ -321,6 +420,11 @@ def specs():
     args = {'type': 'array', 'items': string, 'maxItems': 100}
     definitions = [
         ('catalog', '利用可能なKarakeepツールと制約を一覧表示する。実行しない。', {}, []),
+        ('list_epubs', 'ローカルEPUBの一覧・検索。ファイル名、保存先、サイズと既知のなろう作品名だけを返す。本文は読まない。ダウンロード対象の保存先探しに使い、shell検索をしない。',
+         {'query': string, 'directory': string, 'source': {'type': 'string', 'enum': ['repository', 'documents']},
+          'limit': {'type': 'integer', 'minimum': 1, 'maximum': 100}}, []),
+        ('export_epub', '完成済みEPUBをNanoMuseのダウンロード用成果物にする。原本を保持し、新しいworkspaceファイルを作る。返るworkspace_pathを案内。本文は会話に返さない。',
+         {'path': string, 'source': {'type': 'string', 'enum': ['repository', 'documents']}}, ['path']),
         ('narou_status', '小説家になろうの取得進捗を読み取り専用で確認。候補・取得済EPUB・途中TXT・保存話数・バッチ記録・実行中PID。ワークスペース外の固定データをMCP側で読む。検索shellやcollect/downloadの再実行は不要。', {}, []),
         ('inspect', '固定版のツールソースと引数・制約を読む。--helpを実行しない。', {'path': string}, ['path']),
         ('run', '固定版Karakeep-toolをジョブとして実行。外部変更や上書きの対象を確認して使う。', {'path': string, 'args': args}, ['path']),
@@ -356,6 +460,10 @@ def specs():
 
 
 def invoke(name, args):
+    if name == 'list_epubs':
+        return list_epubs(args.get('query', ''), args.get('directory', ''), args.get('source', 'repository'), args.get('limit', 20))
+    if name == 'export_epub':
+        return export_epub(args['path'], args.get('source', 'repository'))
     if name == 'narou_status':
         return narou_status()
     if name == 'karakeep_write':

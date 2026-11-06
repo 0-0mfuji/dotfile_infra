@@ -5,6 +5,8 @@ description: "教材・書籍処理: setup yomitoku。Karakeep-toolの study/set
 
 # 教材・書籍処理: setup yomitoku
 
+EPUBを作成・提供する依頼では、完成後に `secretary_tools__export_epub` を使う。`path` はKarakeep-toolからの相対パス（文書領域なら `source="documents"`）。保存先が不明なら `secretary_tools__list_epubs` で探し、shellのfind/lsを使わない。返る `workspace_path` を成果物として案内し、NanoMuseではカードを開いてダウンロードできると伝える。本文を会話に読み込まず、URLやボタンを捏造しない。進捗確認だけの依頼では実行しない。
+
 秘書コンテナでは専用環境 `/opt/secretary-ocr` がprovisionで導入済み。通常のOCR依頼でこのインストーラーを再実行しない。環境更新はdotfile_infraの固定依存を更新してprovisionする。
 
 対象: `/srv/secretary/karakeep-tool/study/setup_yomitoku.sh`
