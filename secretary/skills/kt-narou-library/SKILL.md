@@ -1,9 +1,21 @@
 ---
 name: kt-narou-library
-description: "公式APIの人気作品候補と、明示実行する逐次EPUB取得コマンド。Python 3.10+。。Karakeep-toolの books/narou_library.py に対応する。"
+description: "小説家になろうの取得進捗・完了数・途中保存・停止状況を確認する。なろう取得がどこまで終わったか、再開地点を知りたい依頼で使う。候補収集・取得計画にも対応。"
 ---
 
 # 公式APIの人気作品候補と、明示実行する逐次EPUB取得コマンド。Python 3.10+。
+
+## 進捗を知りたい場合
+
+最初に `secretary_tools__narou_status` を引数なしで呼ぶ。job IDは不要。候補数、completed_candidates、partialの保存話数、last_batch_record、running_process_idsを使って回答する。
+
+- shell/filesは文書workspaceしか見えなくても、専用MCPは固定データ領域を読める。grep/find/lsやマウント全体の探索で代用しない。extra_rootsの変更やシェルの常時許可を依頼しない。
+- 状態確認のためにcollect/downloadを実行しない。collectは新規収集、downloadは計画・取得操作であり、進捗集計ではない。
+- EPUB数は本文の完全性や最新話までの取得を保証しない。TXTの行数を話数としない。保存話数はチェックポイントで、候補ファイルの総話数は古い場合がある。
+- PIDは秘書コンテナ内だけの情報。Mac側のプロセスまで停止と断定しない。記録のUTC時刻は日本時間に直して示す。
+- ツールが使えなければ不足を伝えて止める。取得の再実行や無関係なPlane・Karakeep・メモの探索を始めない。
+
+## 新しい収集・取得を依頼された場合
 
 対象: `/srv/secretary/karakeep-tool/books/narou_library.py`
 
@@ -16,7 +28,9 @@ queued/runningなら同じjob_statusで再確認する。待機のためにshell
 
 制約:
 
-引数候補: --count, --delay, --downloader, --execute, --limit, --manifest, --output, --output-dir, --reserve-gib, --resume
+引数候補: --count, --delay, --downloader, --execute, --limit, --manifest, --output, --reserve-gib
+
+上位コマンドに `--resume` はない。再開が明示された場合も、既存TXTへのresume引数は取得プログラム側が自動設定する。進捗確認だけでは再開しない。
 
 ソースの説明:
 

@@ -6,6 +6,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+import zipfile
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -162,6 +163,52 @@ class ToolBoundaryTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             tools.validate_args('echo secret')
         self.assertEqual(tools.validate_args(['$(not-a-command)', 'value with spaces']), ['$(not-a-command)', 'value with spaces'])
+
+
+class NarouStatusTests(unittest.TestCase):
+    def test_counts_legacy_and_current_epubs_and_saved_episodes_without_execution(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repo = Path(folder); root = repo / 'data/novels'; library = root / 'library'
+            library.mkdir(parents=True)
+            works = [{'ncode': code, 'title': code, 'general_all_no': 4}
+                     for code in ('n0001aa', 'n0002bb', 'n0003cc')]
+            (root / 'candidates.json').write_text(json.dumps({'works': works}))
+            first = library / 'n0001aa'; first.mkdir()
+            with zipfile.ZipFile(first / 'n0001aa.epub', 'w') as archive:
+                archive.writestr('mimetype', 'application/epub+zip')
+            with zipfile.ZipFile(root / 'legacy.epub', 'w') as archive:
+                archive.writestr('mimetype', 'application/epub+zip')
+                archive.writestr('content.opf', '<package xmlns:dc="http://purl.org/dc/elements/1.1/">'
+                                 '<dc:source>https://ncode.syosetu.com/n0002bb/</dc:source></package>')
+            partial = library / 'n0003cc'; partial.mkdir()
+            (partial / 'n0003cc.txt').write_text('話数：5\n本文\n［＃「一」は大見出し］\n本文\n［＃「二」は大見出し］\n本文\n')
+            (library / 'batch.jsonl').write_text(json.dumps({'ncode': 'n0001aa', 'success': True})+'\ninvalid\n')
+            before = {str(p): p.read_bytes() for p in root.rglob('*') if p.is_file()}
+            with patch.object(tools, 'REPO', repo), \
+                 patch.object(tools.urllib.request, 'urlopen', side_effect=AssertionError('network forbidden')), \
+                 patch.object(tools.subprocess, 'run', side_effect=AssertionError('execution forbidden')), \
+                 patch.object(tools.subprocess, 'Popen', side_effect=AssertionError('execution forbidden')):
+                result = tools.invoke('narou_status', {})
+            self.assertEqual(result['candidate_count'], 3)
+            self.assertEqual(result['completed_candidates'], 2)
+            self.assertEqual(result['not_completed'], 1)
+            self.assertEqual(result['partial'][0]['saved_episodes'], 2)
+            self.assertEqual(result['partial'][0]['checkpoint_total_episodes'], 5)
+            self.assertEqual(result['partial'][0]['candidate_episodes'], 4)
+            self.assertEqual(result['batch_records_read'], 1)
+            self.assertEqual(before, {str(p): p.read_bytes() for p in root.rglob('*') if p.is_file()})
+
+    def test_rejects_manifest_symlink_escape_and_reports_absent_data(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repo = Path(folder)
+            with patch.object(tools, 'REPO', repo):
+                self.assertFalse(tools.narou_status()['data_present'])
+            root = repo / 'data/novels'; root.mkdir(parents=True)
+            outside = repo / 'private.json'; outside.write_text('{}')
+            (root / 'candidates.json').symlink_to(outside)
+            with patch.object(tools, 'REPO', repo):
+                with self.assertRaises(ValueError):
+                    tools.narou_status()
 
 
 class ImportTests(unittest.TestCase):

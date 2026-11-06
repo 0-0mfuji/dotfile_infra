@@ -228,7 +228,10 @@
         "--reserve-gib",
         "--resume"
       ],
-      "notes": []
+      "notes": [
+        "取得進捗はsecretary_tools__narou_statusで読み取り確認する。collect/downloadを進捗確認のために実行しない。",
+        "--resumeと--output-dirは内部で呼ぶdownloaderの引数。上位narou_library.pyのオプションではない。"
+      ]
     },
     {
       "path": "books/run_all.py",

@@ -16,6 +16,8 @@ import time
 import uuid
 import urllib.request
 import urllib.error
+import zipfile
+import xml.etree.ElementTree as ET
 
 INSTALL = Path('/opt/secretary')
 REPO = Path('/srv/secretary/karakeep-tool')
@@ -214,11 +216,112 @@ def worker(job):
             lock.close()
 
 
+def narou_status():
+    """Read the fixed local library; never run a downloader or access the network."""
+    root = within(REPO, 'data/novels')
+    if not root.is_dir():
+        return {'data_present': False, 'scope': 'secretary container only'}
+    def local(path):
+        return not path.is_symlink() and path.resolve().is_relative_to(root)
+    manifest = root / 'candidates.json'
+    if not local(manifest) or manifest.stat().st_size > 16 * 1024 * 1024:
+        raise ValueError('candidate manifest unavailable or too large')
+    data = json.loads(manifest.read_text())
+    works = {w['ncode'].lower(): w for w in data['works']
+             if re.fullmatch(r'n[0-9]{4}[a-z]+', w.get('ncode', '').lower())}
+    library = root / 'library'
+    if not local(library):
+        raise ValueError('library path escapes novels data')
+    complete, invalid = set(), []
+    epubs = list(root.glob('*.epub')) + list(library.glob('*/*.epub'))
+    valid_count = 0
+    for path in epubs:
+        if not local(path):
+            continue
+        try:
+            with zipfile.ZipFile(path) as archive:
+                with archive.open('mimetype') as stream:
+                    if stream.read(64) != b'application/epub+zip':
+                        raise ValueError('not EPUB')
+                code = path.stem.lower()
+                if code not in works:
+                    for name in archive.namelist():
+                        if name.endswith('.opf') and archive.getinfo(name).file_size <= 2 * 1024 * 1024:
+                            with archive.open(name) as stream:
+                                metadata = ET.fromstring(stream.read(2 * 1024 * 1024))
+                            for source in metadata.iter('{http://purl.org/dc/elements/1.1/}source'):
+                                match = re.fullmatch(r'https?://ncode\.syosetu\.com/(n[0-9]{4}[a-z]+)/?', source.text or '')
+                                if match:
+                                    code = match[1]
+                valid_count += 1
+                if code in works:
+                    complete.add(code)
+        except (OSError, ValueError, KeyError, zipfile.BadZipFile, ET.ParseError):
+            invalid.append(str(path.relative_to(root)))
+    partial = []
+    for path in library.glob('*/*.txt'):
+        code = path.parent.name
+        if code not in works or code in complete or not local(path):
+            continue
+        # Count the downloader's saved episode markers, not arbitrary text lines.
+        saved = 0; checkpoint_total = None
+        with path.open(errors='replace') as stream:
+            for index, line in enumerate(stream):
+                if index < 40:
+                    match = re.fullmatch(r'話数[：:]\s*(\d+)\s*', line)
+                    if match:
+                        checkpoint_total = int(match[1])
+                if re.fullmatch(r'［＃「.*」は(?:大|中|小)見出し］\s*', line):
+                    saved += 1
+        partial.append({'ncode': code, 'title': str(works[code].get('title', ''))[:200],
+                        'saved_episodes': saved, 'checkpoint_total_episodes': checkpoint_total,
+                        'candidate_episodes': works[code].get('general_all_no'),
+                        'text_bytes': path.stat().st_size})
+    records = []; truncated = False
+    log = library / 'batch.jsonl'
+    if log.is_file() and local(log):
+        with log.open('rb') as stream:
+            if log.stat().st_size > 8 * 1024 * 1024:
+                stream.seek(-8 * 1024 * 1024, 2); stream.readline(); truncated = True
+            for line in stream:
+                try:
+                    item = json.loads(line)
+                    if item.get('ncode') in works:
+                        records.append({k: item.get(k) for k in ('ncode', 'success', 'at', 'returncode')})
+                except (ValueError, AttributeError):
+                    continue
+    processes = []
+    for path in Path('/proc').glob('[0-9]*/cmdline'):
+        try:
+            if path.stat().st_uid != os.getuid():
+                continue
+            argv = path.read_bytes().split(b'\0')
+            if argv and Path(os.fsdecode(argv[0])).name.lower().startswith('python') and any(
+                Path(os.fsdecode(a)).name in ('narou_library.py', 'novel_downloader.py') for a in argv[1:] if a):
+                processes.append(int(path.parent.name))
+        except (OSError, ValueError):
+            continue
+    latest = {x['ncode']: x for x in records}
+    return {'data_present': True, 'scope': 'secretary container only; Mac processes are not inspected',
+            'candidate_count': len(works), 'collected_at': data.get('collected_at'),
+            'completed_candidates': len(complete), 'epub_files': len(epubs),
+            'epub_format_valid': valid_count, 'invalid_epubs': invalid[:20],
+            'partial': partial, 'not_completed': len(works) - len(complete),
+            'last_batch_record': records[-1] if records else None,
+            'batch_records_read': len(records), 'batch_log_truncated': truncated,
+            'unresolved_logged_failures': [k for k, v in latest.items() if v['success'] is False and k not in complete],
+            'running_process_ids': processes,
+            'notes': 'EPUB count confirms local ZIP/mimetype, not complete text or current website episode coverage. '
+                     'Saved TXT episode markers are checkpoints; candidate episode totals may be older. '
+                     'No network access, acquisition restart, or file modification was performed.'}
+
+
 def specs():
     string = {'type': 'string'}
     args = {'type': 'array', 'items': string, 'maxItems': 100}
     definitions = [
         ('catalog', '利用可能なKarakeepツールと制約を一覧表示する。実行しない。', {}, []),
+        ('narou_status', '小説家になろうの取得進捗を読み取り専用で確認。候補・取得済EPUB・途中TXT・保存話数・バッチ記録・実行中PID。ワークスペース外の固定データをMCP側で読む。検索shellやcollect/downloadの再実行は不要。', {}, []),
         ('inspect', '固定版のツールソースと引数・制約を読む。--helpを実行しない。', {'path': string}, ['path']),
         ('run', '固定版Karakeep-toolをジョブとして実行。外部変更や上書きの対象を確認して使う。', {'path': string, 'args': args}, ['path']),
         ('job_status', 'ジョブ状態とログを確認。完了待ちはwait_seconds=45で行い、shellのsleepは使わない。最長45秒で状態を返す。',
@@ -253,6 +356,8 @@ def specs():
 
 
 def invoke(name, args):
+    if name == 'narou_status':
+        return narou_status()
     if name == 'karakeep_write':
         raise ValueError('karakeep_write is retired; use create/tags or an operator-confirmed plan')
     if name == 'karakeep_create':
