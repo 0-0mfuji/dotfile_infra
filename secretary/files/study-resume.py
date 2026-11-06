@@ -126,20 +126,19 @@ def copy_independent(source, target):
 
 
 def remap(value, old_folder, new_folder, old_repo):
-    if isinstance(value, str):
-        relative_folder = str(old_folder.relative_to(old_repo))
-        if value == relative_folder or value.startswith(relative_folder + '/'):
-            return str(new_folder) + value[len(relative_folder):]
-        if value == str(old_folder) or value.startswith(str(old_folder) + '/'):
-            return str(new_folder) + value[len(str(old_folder)):]
-        if value == str(old_repo) or value.startswith(str(old_repo) + '/'):
-            return str(REPO) + value[len(str(old_repo)):]
-        return value
-    if isinstance(value, list):
-        return [remap(x, old_folder, new_folder, old_repo) for x in value]
-    if isinstance(value, dict):
-        return {k: remap(v, old_folder, new_folder, old_repo) for k, v in value.items()}
-    return value
+    prefixes = ((str(old_folder.relative_to(old_repo)), str(new_folder)),
+                (str(old_folder), str(new_folder)), (str(old_repo), str(REPO)))
+    def walk(item):
+        if isinstance(item, str):
+            for prefix, replacement in prefixes:
+                if item == prefix or item.startswith(prefix + '/'):
+                    return replacement + item[len(prefix):]
+        elif isinstance(item, list):
+            return [walk(x) for x in item]
+        elif isinstance(item, dict):
+            return {k: walk(v) for k, v in item.items()}
+        return item
+    return walk(value)
 
 
 def prepare():
@@ -171,9 +170,16 @@ def prepare():
                 raise ValueError('symlink in imported conversion tree')
             shutil.copytree(original, target, copy_function=copy_independent)
             for path in target.rglob('*.json'):
-                before = json.loads(path.read_text())
+                raw = path.read_text()
+                identity = path.name == 'input.json' and path.parent.name == 'cache'
+                # Most OCR cache bodies contain no filesystem paths. Preserve their
+                # exact bytes instead of traversing millions of transcription nodes.
+                needles = (str(old_repo), str(old_folder.relative_to(old_repo)))
+                if not identity and not any(needle in raw for needle in needles):
+                    continue
+                before = json.loads(raw)
                 after = remap(before, old_folder, final, old_repo)
-                if path.name == 'input.json' and path.parent.name == 'cache':
+                if identity:
                     after['tesseract'] = False
                     if isinstance(after.get('batch_profile'), dict):
                         after['batch_profile']['tesseract'] = False
