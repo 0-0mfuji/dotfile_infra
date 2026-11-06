@@ -9,6 +9,10 @@ case "$1" in
       /opt/secretary-tools/bin/python /opt/secretary/study-resume.py "$1"
     ;;
   start)
+    # Keep the user manager alive when the last SSH session closes.
+    if [ "$(loginctl show-user "$(id -un)" -p Linger --value)" != yes ]; then
+      loginctl enable-linger "$(id -un)"
+    fi
     exec systemd-run --user --unit=secretary-study-resume --collect \
       systemd-inhibit --what=sleep --mode=block --why='Secretary study EPUB conversion' \
       incus exec secretary-dev -- runuser -u secretary -- \
