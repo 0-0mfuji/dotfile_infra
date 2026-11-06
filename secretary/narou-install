@@ -50,6 +50,15 @@ if [ ! -d "$release" ]; then
 fi
 echo "$NOVEL_DOWNLOADER_PATCHED_SHA256  $release/novel_downloader.py" | sha256sum -c -
 echo "$NOVEL_DOWNLOADER_LICENSE_SHA256  $release/LICENSE.md" | sha256sum -c -
+# The upstream /novel_downloader/ ignore rule matches directories, not this
+# managed symlink. Keep this generated dependency out of worktree checks too.
+exclude="$repo/.git/info/exclude"
+[ ! -L "$exclude" ] || { echo 'Git exclude is a symlink; preserve and review it'; exit 1; }
+touch "$exclude"
+if ! grep -qxF '/novel_downloader' "$exclude"; then
+  printf '\n/novel_downloader\n' >> "$exclude"
+fi
+chown --reference="$repo/.git" "$exclude"
 ln -s "$release" "$temporary_link"
 mv -Tf "$temporary_link" "$target"
 echo 'Installed novel_downloader v2.21.0 with verified Narou pagination patch. Existing data was not modified.'
