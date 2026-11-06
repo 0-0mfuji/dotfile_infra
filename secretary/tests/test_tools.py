@@ -167,6 +167,12 @@ class ToolBoundaryTests(unittest.TestCase):
 
 
 class StudyDiagnosticsTests(unittest.TestCase):
+    def test_process_probe_does_not_treat_python_code_as_a_script(self):
+        self.assertEqual(tools.python_script(['python3', '-c', 'yomitoku_worker.py']), (None, []))
+        self.assertEqual(tools.python_script(['bash', 'convert_study_materials.py', 'run']), (None, []))
+        self.assertEqual(tools.python_script(['python3', '-u', '/repo/study/convert_study_materials.py', 'run']),
+                         ('convert_study_materials.py', ['run']))
+
     def test_status_separates_medical_jobs_and_relocates_output_references(self):
         with tempfile.TemporaryDirectory() as folder:
             repo = Path(folder); root = repo / 'data/study/text-reflow-library'; root.mkdir(parents=True)

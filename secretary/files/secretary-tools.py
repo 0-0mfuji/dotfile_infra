@@ -217,6 +217,18 @@ def worker(job):
             lock.close()
 
 
+def python_script(argv):
+    args = [os.fsdecode(x) for x in argv if x]
+    if not args or not Path(args[0]).name.lower().startswith('python'):
+        return None, []
+    args = args[1:]
+    while args and args[0] in ('-u', '-B', '-s', '-S', '-E', '-I'):
+        args = args[1:]
+    if not args or args[0].startswith('-'):
+        return None, []
+    return Path(args[0]).name, args[1:]
+
+
 def study_status(scope='medical'):
     if scope not in ('medical', 'nonmedical', 'all'):
         raise ValueError('scope must be medical, nonmedical or all')
@@ -263,15 +275,14 @@ def study_status(scope='medical'):
     for kind, values in totals.items():
         if scope in ('all', kind):
             for key, value in values.items():counts[key] = counts.get(key, 0) + value
-    processes = []
+    converters = []; workers = []
     for path in Path('/proc').glob('[0-9]*/cmdline'):
         try:
             if path.stat().st_uid != os.getuid():continue
-            argv = [os.fsdecode(x) for x in path.read_bytes().split(b'\0') if x]
-            if not argv or not Path(argv[0]).name.lower().startswith('python'):continue
-            scripts = {Path(x).name for x in argv[1:]}
-            if 'yomitoku_worker.py' in scripts or ('convert_study_materials.py' in scripts and 'run' in argv):
-                processes.append(int(path.parent.name))
+            script, args = python_script(path.read_bytes().split(b'\0'))
+            if script == 'yomitoku_worker.py':workers.append(int(path.parent.name))
+            if script == 'convert_study_materials.py' and args and args[0] == 'run':
+                converters.append(int(path.parent.name))
         except (OSError, ValueError):continue
     free = shutil.disk_usage(REPO).free
     return {'data_present': (root / 'plan.json').is_file(), 'scope': scope, 'planned_jobs': len(selected), 'counts': counts, 'all_plan_jobs': len(plan['jobs']),
@@ -279,12 +290,15 @@ def study_status(scope='medical'):
             'saved_progress': live, 'progress_in_scope': live.get('job_id') in selected,
             'saved_run_status': {k: saved.get(k) for k in ('status', 'updated_at', 'completed_jobs', 'publication_status')},
             'present_completed_epub_files': output_count, 'completed_records_with_missing_files': absent[:20],
-            'free_gib_now': round(free / 1024**3, 2), 'related_conversion_process_ids': processes,
+            'free_gib_now': round(free / 1024**3, 2),
+            'conversion_process_ids': converters, 'ocr_worker_process_ids': workers,
+            'related_conversion_process_ids': converters + workers,
             'gpu_program_support': {'devices': ['cpu', 'mps', 'cuda', 'auto'], 'default': 'cpu',
                 'cuda_arguments': ['--device', 'cuda', '--yomitoku-python', '/opt/secretary-ocr/bin/python']},
             'notes': 'Counts are planned conversion jobs, not distinct books or original catalog groups. '
                      'Saved progress is historical and does not prove a run is active. Converted drafts are unreviewed. '
                      'Mac paths and path-derived job IDs need reconciliation before resuming on Linux. '
+                     'An OCR worker alone may be idle and does not prove conversion is running. '
                      'GPU availability must be checked with gpu_diagnostics, not the isolated shell. No conversion was started.'}
 
 
@@ -496,9 +510,10 @@ def narou_status():
         try:
             if path.stat().st_uid != os.getuid():
                 continue
-            argv = path.read_bytes().split(b'\0')
-            if argv and Path(os.fsdecode(argv[0])).name.lower().startswith('python') and any(
-                Path(os.fsdecode(a)).name in ('narou_library.py', 'novel_downloader.py') for a in argv[1:] if a):
+            script, args = python_script(path.read_bytes().split(b'\0'))
+            if (script == 'narou_library.py' and args and args[0] == 'download' and '--execute' in args) or (
+                script == 'novel_downloader.py' and any(a.startswith(('https://ncode.syosetu.com/', 'http://ncode.syosetu.com/')) for a in args)
+                and not any(a in args for a in ('--dry-run', '--check-update', '--help'))):
                 processes.append(int(path.parent.name))
         except (OSError, ValueError):
             continue
