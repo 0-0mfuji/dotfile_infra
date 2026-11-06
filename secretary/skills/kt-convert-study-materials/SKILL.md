@@ -19,7 +19,7 @@ EPUBを作成・提供する依頼では、完成後に `secretary_tools__export
 4. 返るjob_idを `secretary_tools__job_status(job_id=..., wait_seconds=45)` で待つ。完了後、elapsed_seconds、新規OCRページ数、DPI、成否を報告する。秒/ページにはモデル読込・EPUB作成と検査を含む。同条件の重複要求は既存job_idを返すので、再実行せず既存結果を確認する。
 5. 「どうですか」は進捗確認。新しい試験や再試行を開始しない。最初の測定1件で結果を返し、並列数を2→4→6→8と自動拡大しない。OOM、引数エラー、入力不足、ツール上限で停止したら、その状態・job_id・完了分を報告する。追加実験はユーザーが具体的に依頼した範囲に限定する。
 6. 速度比較は同じページ・DPI・新規キャッシュ・成功をそろえる。別ページの処理時間、キャッシュ再利用、並列ジョブの一部失敗から倍率を断定しない。EPUBCheck合格はOCR精度の保証ではない。
-7. 全冊変換・正式再開は、原本ハッシュ検証と旧Macキャッシュ移行を行う管理者用 `secretary/study-resume` 経路に限定する。汎用runで直接開始しない。既に再開済みならstudy_statusで進捗だけ確認する。移行済みのtext-reflow-linuxと元のtext-reflow-libraryを混同せず、migrationの入力不足も示す。既存ジョブとGPU翻訳を並列実行しない。外部AIへ勝手に切り替えない。
+7. 全冊変換・残り全部・正式再開の依頼では、まず `secretary_tools__study_status(scope="all")` のruntimeを確認する。running/preparingなら既存処理を案内し、追加起動しない。stoppedなら `secretary_tools__study_resume` を1回だけ呼ぶ。引数は不要。queued/claimed/dispatchedは完了ではなく起動要求の状態であり、`study_status(scope="all", wait_seconds=45)` で最大2回確認する。ホスト未起動やfailedならその状態を伝えて止め、shellや汎用runで代用しない。管理者コマンドの所在探し、PATH確認、/opt探索、study-resume.pyのソース読取りも不要。保存済みrunningとruntime.stoppedが異なる場合はruntimeを優先する。626は利用可能な計画件数で、634という旧件数との差やmigrationの入力不足も明示する。
 
 ツール呼出し上限に近づいたら追加処理を開始せず、job_id・条件・完了分・未完了を短い進捗文書へ保存する。履歴が不明でも「未実施」「依頼なし」と断定せず、study_statusのrecent_sample_jobsからjob_idを回復し、job_statusを確認する。
 

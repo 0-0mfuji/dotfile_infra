@@ -360,11 +360,71 @@ def recent_study_samples():
     return result
 
 
-def study_status(scope='medical'):
+def resume_request_state():
+    path = STATE / 'study-resume-request.json'
+    if not path.exists():
+        return None
+    if path.is_symlink() or path.stat().st_size > 4096:
+        raise ValueError('invalid resume request file')
+    value = json.loads(path.read_text())
+    allowed = {'request_id', 'state', 'created', 'updated_at', 'error'}
+    if not isinstance(value, dict) or set(value) - allowed or not re.fullmatch('[a-f0-9]{32}', str(value.get('request_id', ''))):
+        raise ValueError('invalid resume request')
+    return value
+
+
+def study_resume():
+    root = REPO / 'data/study/text-reflow-linux'
+    if not (root / 'migration.json').is_file():
+        raise ValueError('verified migration is not prepared; operator setup is required, do not search using shell')
+    runners = full_study_processes()
+    if runners:
+        return {'state': 'running', 'process_ids': runners, 'status_tool': 'secretary_tools__study_status',
+                'notes': 'Already running; no duplicate request was created.'}
+    if active_ocr_processes():
+        raise ValueError('another OCR job is active; check study_status rather than launching parallel work')
+    if shutil.disk_usage(REPO).free < 6 * 1024**3:
+        raise ValueError('at least 6 GiB free space required before requesting resume')
+    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (STATE / 'study-control.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        path = STATE / 'study-resume-request.json'
+        saved = resume_request_state() or {}
+        if saved.get('state') in ('queued', 'claimed', 'dispatched') and time.time() - saved.get('created', 0) < 600:
+            return {**saved, 'status_tool': 'secretary_tools__study_status', 'reused_request': True}
+        saved = {'request_id': uuid.uuid4().hex, 'state': 'queued', 'created': time.time()}
+        atomic_json(path, saved)
+        return {**saved, 'status_tool': 'secretary_tools__study_status', 'dispatch_interval_seconds': 15,
+                'notes': 'One fixed local resume request. Check study_status(wait_seconds=45); no shell/run or additional requests.'}
+
+
+def full_study_processes():
+    result = []
+    for path in Path('/proc').glob('[0-9]*/cmdline'):
+        try:
+            if path.stat().st_uid != os.getuid():
+                continue
+            script, args = python_script(path.read_bytes().split(b'\0'))
+            if script == 'study-resume.py' and args == ['run']:
+                result.append(int(path.parent.name))
+        except OSError:
+            continue
+    return result
+
+
+def study_status(scope='medical', wait_seconds=0):
+    if type(wait_seconds) is not int or not 0 <= wait_seconds <= 45:
+        raise ValueError('wait_seconds must be 0..45')
     if scope not in ('medical', 'nonmedical', 'all'):
         raise ValueError('scope must be medical, nonmedical or all')
     resumed = within(REPO, 'data/study/text-reflow-linux')
     root = resumed if (resumed / 'migration.json').is_file() else within(REPO, 'data/study/text-reflow-library')
+    watched = [root / 'progress.json', root / 'resume-state.json', STATE / 'study-resume-request.json']
+    def stamp():
+        return tuple(p.stat().st_mtime_ns if p.exists() else None for p in watched)
+    initial, deadline = stamp(), time.monotonic() + wait_seconds
+    while time.monotonic() < deadline and stamp() == initial:
+        time.sleep(min(0.5, max(0, deadline - time.monotonic())))
     def read(path, default):
         if not path.exists():
             return default
@@ -417,6 +477,10 @@ def study_status(scope='medical'):
                 converters.append(int(path.parent.name))
         except (OSError, ValueError):continue
     free = shutil.disk_usage(REPO).free
+    full = full_study_processes()
+    saved_runtime = read(root / 'resume-state.json', {})
+    resume_request = resume_request_state()
+    actual_state = 'running' if converters else 'preparing' if full else 'stopped'
     return {'data_present': (root / 'plan.json').is_file(), 'scope': scope, 'planned_jobs': len(selected), 'counts': counts, 'all_plan_jobs': len(plan['jobs']),
             'all_scope_counts': totals, 'profile_id': profile or None, 'output_root': str(root),
             'migration': read(root / 'migration.json', None),
@@ -425,6 +489,10 @@ def study_status(scope='medical'):
             'present_completed_epub_files': output_count, 'completed_records_with_missing_files': absent[:20],
             'free_gib_now': round(free / 1024**3, 2),
             'conversion_process_ids': converters, 'ocr_worker_process_ids': workers,
+            'runtime': {'state': actual_state, 'full_process_ids': full,
+                        'saved_state': saved_runtime.get('state'),
+                        'saved_running_record_is_stale': saved_runtime.get('state') == 'running' and not full and not converters},
+            'resume_request': resume_request,
             'related_conversion_process_ids': converters + workers,
             'recent_sample_jobs': recent_study_samples(),
             'gpu_program_support': {'devices': ['cpu', 'mps', 'cuda', 'auto'], 'default': 'cpu',
@@ -721,7 +789,9 @@ def specs():
          {'query': string, 'directory': string, 'source': {'type': 'string', 'enum': ['repository', 'documents']},
           'limit': {'type': 'integer', 'minimum': 1, 'maximum': 100}}, []),
         ('study_status', '医学書・学習教材EPUBの変換進捗、医学/非医学別件数、保存済み停止位置、出力ファイルと現在の空き容量を読む。statusの汎用runやshell探索は不要。変換は起動しない。',
-         {'scope': {'type': 'string', 'enum': ['medical', 'nonmedical', 'all']}}, []),
+         {'scope': {'type': 'string', 'enum': ['medical', 'nonmedical', 'all']},
+          'wait_seconds': {'type': 'integer', 'minimum': 0, 'maximum': 45}}, []),
+        ('study_resume', '利用者が残り全部の変換・正式再開を依頼したときの専用経路。検証済みLinuxライブラリの固定GPUジョブだけをホストへ要求する。任意引数・保存先・シェルは受け付けず、実行中なら重複起動しない。結果はstudy_statusで確認。', {}, []),
         ('gpu_diagnostics', 'OCR用Pythonの実環境でTorch/CUDA/YomiTokuと小さなGPU計算を確認。隔離shellでGPUなしと誤判定しない。任意コマンドやOCRは実行しない。', {}, []),
         ('study_sample', '学習教材PDFの速度確認用に1〜16ページだけ新規OCRしEPUBを作成・検査する。既定8ページ・300dpi・CUDA。オフライン、1ジョブ、既存出力を保持。同条件の重複要求は既存job_idを返す。追加試験や並列試験を自動起動しない。',
          {'input_file': string, 'first_page': {'type': 'integer', 'minimum': 1, 'maximum': 10000},
@@ -767,13 +837,15 @@ def specs():
 
 
 def invoke(name, args):
+    if name == 'study_resume':
+        return study_resume()
     if name == 'study_sample':
         return study_sample(args['input_file'], args.get('first_page', 1), args.get('page_count', 8),
                             args.get('dpi', 300), args.get('device', 'cuda'))
     if name == 'data_files':
         return data_files(args.get('query', ''), args.get('directory', 'data' if args.get('source', 'repository') == 'repository' else ''), args.get('source', 'repository'), args.get('limit', 20))
     if name == 'study_status':
-        return study_status(args.get('scope', 'medical'))
+        return study_status(args.get('scope', 'medical'), args.get('wait_seconds', 0))
     if name == 'gpu_diagnostics':
         return gpu_diagnostics()
     if name == 'list_epubs':

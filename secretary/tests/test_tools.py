@@ -24,6 +24,62 @@ tools = load('secretary_tools', ROOT / 'files/secretary-tools.py')
 migration = load('tools_migration', ROOT / 'tooling/migrate-config.py')
 importer = load('data_import', ROOT / 'files/import-tool-data.py')
 idle = load('idle_check', ROOT / 'tooling/check-idle.py')
+control = load('study_control', ROOT / 'files/study-control.py')
+
+
+class ResumeControlTests(unittest.TestCase):
+    def test_request_is_idempotent_and_claimed_only_once(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            library = root / 'data/study/text-reflow-linux'
+            library.mkdir(parents=True)
+            (library / 'migration.json').write_text('{}')
+            state = root / 'state'
+            with patch.object(tools, 'REPO', root), patch.object(tools, 'STATE', state), \
+                    patch.object(control, 'STATE', state), patch.object(tools, 'full_study_processes', return_value=[]), \
+                    patch.object(tools, 'active_ocr_processes', return_value=[]), \
+                    patch.object(tools.shutil, 'disk_usage', return_value=SimpleNamespace(free=20 * 1024**3)):
+                first = tools.study_resume()
+                second = tools.study_resume()
+                self.assertEqual(first['request_id'], second['request_id'])
+                self.assertEqual(control.update('claim'), 'start')
+                self.assertEqual(control.update('claim'), 'none')
+                control.update('started')
+                self.assertEqual(tools.resume_request_state()['state'], 'dispatched')
+                self.assertEqual(tools.study_resume()['request_id'], first['request_id'])
+
+    def test_running_batch_does_not_queue_another(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            library = root / 'data/study/text-reflow-linux'
+            library.mkdir(parents=True)
+            (library / 'migration.json').touch()
+            with patch.object(tools, 'REPO', root), patch.object(tools, 'full_study_processes', return_value=[99]):
+                self.assertEqual(tools.study_resume()['state'], 'running')
+
+    def test_expired_or_arbitrary_payload_cannot_start(self):
+        with tempfile.TemporaryDirectory() as folder:
+            state = Path(folder)
+            path = state / 'study-resume-request.json'
+            with patch.object(control, 'STATE', state):
+                path.write_text(json.dumps({'request_id': 'a' * 32, 'state': 'queued', 'created': 0}))
+                self.assertEqual(control.update('claim'), 'none')
+                self.assertEqual(json.loads(path.read_text())['state'], 'failed')
+                path.write_text(json.dumps({'request_id': 'a' * 32, 'state': 'queued', 'created': 0, 'command': 'arbitrary'}))
+                self.assertEqual(control.update('claim'), 'none')
+
+    def test_saved_running_without_process_is_reported_stale(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            library = root / 'data/study/text-reflow-linux'
+            library.mkdir(parents=True)
+            (library / 'migration.json').write_text('{}')
+            (library / 'resume-state.json').write_text('{"state":"running","pid":999999}')
+            with patch.object(tools, 'REPO', root), patch.object(tools, 'STATE', root / 'state'), \
+                    patch.object(tools, 'full_study_processes', return_value=[]):
+                result = tools.study_status('all')
+            self.assertEqual(result['runtime']['state'], 'stopped')
+            self.assertTrue(result['runtime']['saved_running_record_is_stale'])
 
 
 class DiscoveryTests(unittest.TestCase):

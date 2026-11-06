@@ -53,6 +53,13 @@ def migrate(path, backups):
     current = str(agent.get('instructions', ''))
     if trial_route not in current:
         agent['instructions'] = current + '\n' + trial_route
+    resume_route = ('学習教材の残り全部・正式再開はstudy_status(scope="all")でruntimeを確認し、停止時だけstudy_resumeを1回使ってください。'
+                    'queued/claimed/dispatchedは起動要求であり、study_status(wait_seconds=45)を最大2回確認してください。'
+                    '起動済みなら重複起動しないでください。shellでPATH・/opt・コマンド・実装を探索せず、汎用runでの代用もしないでください。'
+                    '専用ツールが見つからなければ利用不可と報告し、探索や承認を繰り返さないでください。保存記録よりruntimeの実プロセス判定を優先してください。')
+    current = str(agent.get('instructions', ''))
+    if resume_route not in current:
+        agent['instructions'] = current + '\n' + resume_route
     servers = doc.setdefault('mcp', {}).setdefault('servers', [])
     managed = next((s for s in servers if s.get('name') == 'secretary_tools'), None)
     if managed is None:
@@ -64,7 +71,7 @@ def migrate(path, backups):
     policies = managed.setdefault('tools', {})
     for name in ('catalog', 'inspect', 'job_status', 'doctor', 'narou_status', 'list_epubs', 'study_status', 'data_files'):
         policies[name] = {'risk': 'safe', 'egress': False}
-    for name in ('translate', 'dictionary', 'export_epub', 'gpu_diagnostics', 'study_sample'):
+    for name in ('translate', 'dictionary', 'export_epub', 'gpu_diagnostics', 'study_sample', 'study_resume'):
         policies[name] = {'risk': 'moderate', 'egress': False}
     # A fixed CLI against the configured user's own Karakeep; callers cannot select
     # another endpoint. Egress is mediated here, not arbitrary subprocess networking.

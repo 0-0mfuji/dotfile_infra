@@ -92,7 +92,7 @@ snapshot_download(repo_id=sys.argv[1], revision=sys.argv[2],
 from pathlib import Path
 Path('/opt/secretary/plamo.revision').write_text(sys.argv[2]+'\n')
 PY
-for file in secretary-tools.py plamo-translate.py import-tool-data.py study-resume.py; do
+for file in secretary-tools.py plamo-translate.py import-tool-data.py study-resume.py study-control.py; do
   install -m 644 "$DIR/files/$file" /opt/secretary/
 done
 install -m 644 "$DIR/tooling/catalog.json" /opt/secretary/catalog.json

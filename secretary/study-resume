@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run on the development host after pulling this repository.
 set -euo pipefail
-[ "$#" -eq 1 ] || { echo 'usage: secretary/study-resume {plan|prepare|start|status}' >&2; exit 2; }
+[ "$#" -eq 1 ] || { echo 'usage: secretary/study-resume {plan|prepare|start|status|dispatch}' >&2; exit 2; }
 case "$1" in
   plan|prepare)
     exec systemd-inhibit --what=sleep --mode=block --why='Verify and migrate secretary study library' \
@@ -23,5 +23,15 @@ case "$1" in
     exec incus exec secretary-dev -- runuser -u secretary -- \
       /opt/secretary-tools/bin/python /opt/secretary/study-resume.py status
     ;;
-  *) echo 'usage: secretary/study-resume {plan|prepare|start|status}' >&2; exit 2 ;;
+  dispatch)
+    action="$(incus exec secretary-dev -- runuser -u secretary -- /usr/bin/python3 /opt/secretary/study-control.py claim)"
+    [ "$action" = start ] || exit 0
+    if systemctl --user is-active --quiet secretary-study-resume || "$0" start; then
+      incus exec secretary-dev -- runuser -u secretary -- /usr/bin/python3 /opt/secretary/study-control.py started
+    else
+      incus exec secretary-dev -- runuser -u secretary -- /usr/bin/python3 /opt/secretary/study-control.py failed
+      exit 1
+    fi
+    ;;
+  *) echo 'usage: secretary/study-resume {plan|prepare|start|status|dispatch}' >&2; exit 2 ;;
 esac
