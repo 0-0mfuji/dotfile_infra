@@ -29,6 +29,14 @@ def migrate(path, backups):
                    '既に承認された同じ操作について会話で重複確認しないでください。')
     if old in instructions:
         agent['instructions'] = instructions.replace(old, replacement)
+    progress_route = ('取得・変換の進捗確認はまず専用MCPを使ってください。'
+                      'なろうはsecretary_tools__narou_status、医学書・学習教材はsecretary_tools__study_status、'
+                      'GPU確認はsecretary_tools__gpu_diagnosticsです。'
+                      'これらの確認をshellの探索や汎用runで代用せず、隔離shellの結果からデータやGPUがないと断定しないでください。'
+                      '進捗確認だけの依頼で収集・変換を再実行しないでください。')
+    current = str(agent.get('instructions', ''))
+    if progress_route not in current:
+        agent['instructions'] = current + '\n' + progress_route
     servers = doc.setdefault('mcp', {}).setdefault('servers', [])
     managed = next((s for s in servers if s.get('name') == 'secretary_tools'), None)
     if managed is None:
@@ -38,9 +46,9 @@ def migrate(path, backups):
                        reads_private_data=True, egress=True, call_timeout_s=120.0)
         servers.append(managed)
     policies = managed.setdefault('tools', {})
-    for name in ('catalog', 'inspect', 'job_status', 'doctor', 'narou_status', 'list_epubs'):
+    for name in ('catalog', 'inspect', 'job_status', 'doctor', 'narou_status', 'list_epubs', 'study_status'):
         policies[name] = {'risk': 'safe', 'egress': False}
-    for name in ('translate', 'dictionary', 'export_epub'):
+    for name in ('translate', 'dictionary', 'export_epub', 'gpu_diagnostics'):
         policies[name] = {'risk': 'moderate', 'egress': False}
     # A fixed CLI against the configured user's own Karakeep; callers cannot select
     # another endpoint. Egress is mediated here, not arbitrary subprocess networking.

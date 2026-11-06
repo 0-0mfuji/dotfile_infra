@@ -5,6 +5,8 @@ description: "Native reflow text, font-glyph repair, diagrams and linked origina
 
 # Native reflow text, font-glyph repair, diagrams and linked original appendix.
 
+医学書・学習教材の変換状況は `secretary_tools__study_status`（`scope="medical"|"nonmedical"|"all"`）で確認する。GPU可否は `secretary_tools__gpu_diagnostics` を使う。shell/filesの隔離環境からGPUなし・データなしと断定しない。進捗確認に汎用runのstatusやシェル探索を使わず、変換を再開しない。保存記録と現在の実行状態を分け、移行前のMac絶対パスやパス由来のジョブIDは再開前に整合が必要と伝える。
+
 対象: `/srv/secretary/karakeep-tool/study/build_firstaid_epubs.py`
 
 1. `secretary_tools__inspect` に `path="study/build_firstaid_epubs.py"` を渡し、ソースの引数・既定値・入出力・必要データを読む。ヘルプ非対応で実処理が始まるスクリプトもあるため、最初から実行しない。

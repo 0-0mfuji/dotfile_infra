@@ -8,6 +8,7 @@ import tempfile
 import unittest
 import zipfile
 from unittest.mock import patch
+from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -165,6 +166,48 @@ class ToolBoundaryTests(unittest.TestCase):
         self.assertEqual(tools.validate_args(['$(not-a-command)', 'value with spaces']), ['$(not-a-command)', 'value with spaces'])
 
 
+class StudyDiagnosticsTests(unittest.TestCase):
+    def test_status_separates_medical_jobs_and_relocates_output_references(self):
+        with tempfile.TemporaryDirectory() as folder:
+            repo = Path(folder); root = repo / 'data/study/text-reflow-library'; root.mkdir(parents=True)
+            profile = 'd' * 12
+            jobs = [{'id': 'a'*16, 'sd_epubs': ['医学教科書/book.epub']},
+                    {'id': 'b'*16, 'sd_epubs': ['医師国家試験/book.epub']},
+                    {'id': 'c'*16, 'sd_epubs': ['資格/book.epub']}]
+            (root / 'plan.json').write_text(json.dumps({'jobs': jobs}))
+            (root / 'progress.json').write_text(json.dumps({'profile_id': profile, 'job_id': 'b'*16, 'position': 'PDF 2/4'}))
+            (root / 'run-status.json').write_text(json.dumps({'status': 'stopped_low_disk', 'completed_jobs': 1}))
+            for jid, state in (('a'*16, 'converted_draft'), ('b'*16, 'stopped_low_disk')):
+                target = root / 'books' / jid / profile; target.mkdir(parents=True)
+                outputs = []
+                if state == 'converted_draft':
+                    (target / 'book.epub').write_bytes(b'fixture')
+                    outputs = ['/old/mac/data/study/text-reflow-library/books/'+jid+'/'+profile+'/book.epub']
+                (target / 'job.json').write_text(json.dumps({'status': state, 'outputs': outputs}))
+            with patch.object(tools, 'REPO', repo), \
+                 patch.object(tools.subprocess, 'run', side_effect=AssertionError('no conversion')), \
+                 patch.object(tools.urllib.request, 'urlopen', side_effect=AssertionError('no network')):
+                result = tools.invoke('study_status', {'scope': 'medical'})
+                nonmedical = tools.invoke('study_status', {'scope': 'nonmedical'})
+            self.assertEqual(result['planned_jobs'], 2)
+            self.assertEqual(result['all_plan_jobs'], 3)
+            self.assertEqual(result['counts'], {'converted_draft': 1, 'stopped_low_disk': 1})
+            self.assertEqual(result['present_completed_epub_files'], 1)
+            self.assertFalse(result['completed_records_with_missing_files'])
+            self.assertEqual(nonmedical['counts'], {'pending': 1})
+
+    def test_gpu_probe_uses_fixed_ocr_interpreter_and_reports_failure_without_guessing(self):
+        with patch.object(tools.subprocess, 'run', return_value=SimpleNamespace(
+            stdout='{"cuda_available": true, "cuda_calculation_ok": true}\n', returncode=0)) as run:
+            result = tools.invoke('gpu_diagnostics', {})
+        self.assertTrue(result['ocr_runtime']['cuda_calculation_ok'])
+        self.assertEqual(run.call_args.args[0][:2], ['/opt/secretary-ocr/bin/python', '-c'])
+        self.assertFalse(run.call_args.kwargs.get('shell', False))
+        with patch.object(tools.subprocess, 'run', side_effect=FileNotFoundError):
+            result = tools.gpu_diagnostics()
+        self.assertNotIn('cuda_available', result['ocr_runtime'])
+
+
 class EpubExportTests(unittest.TestCase):
     def test_listing_is_bounded_metadata_only_and_uses_narou_titles(self):
         with tempfile.TemporaryDirectory() as folder:
@@ -172,13 +215,19 @@ class EpubExportTests(unittest.TestCase):
             (novels / 'candidates.json').write_text(json.dumps({'works': [{'ncode': 'n0001aa', 'title': '選ぶ作品'}]}))
             (novels / 'n0001aa.epub').write_bytes(b'not-read-as-book-contents')
             (repo / 'other.epub').write_bytes(b'other')
+            study = repo / 'data/study/text-reflow-library'; study.mkdir(parents=True)
+            (study / 'plan.json').write_text(json.dumps({'jobs': [{'id': 'a'*16, 'title': '医学の教材'}]}))
+            study_output = study / 'books' / ('a'*16) / ('b'*12); study_output.mkdir(parents=True)
+            (study_output / 'horizontal.epub').write_bytes(b'fixture')
             (repo / 'link.epub').symlink_to(repo.parent / 'private.epub')
             with patch.object(tools, 'REPO', repo):
                 result = tools.list_epubs(query='選ぶ')
                 bounded = tools.list_epubs(limit=1)
+                medical = tools.list_epubs(query='医学の教材')
                 with self.assertRaises(ValueError):
                     tools.list_epubs(directory='../')
             self.assertEqual(result['total_matches'], 1)
+            self.assertEqual(medical['total_matches'], 1)
             self.assertEqual(result['items'][0]['path'], 'data/novels/n0001aa.epub')
             self.assertNotIn('not-read-as-book-contents', json.dumps(result))
             self.assertTrue(bounded['truncated'])

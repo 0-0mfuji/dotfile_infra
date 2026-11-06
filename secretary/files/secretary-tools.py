@@ -217,6 +217,99 @@ def worker(job):
             lock.close()
 
 
+def study_status(scope='medical'):
+    if scope not in ('medical', 'nonmedical', 'all'):
+        raise ValueError('scope must be medical, nonmedical or all')
+    root = within(REPO, 'data/study/text-reflow-library')
+    def read(path, default):
+        if not path.exists():
+            return default
+        if path.is_symlink() or not path.resolve().is_relative_to(root) or path.stat().st_size > 16 * 1024 * 1024:
+            raise ValueError('invalid study status file')
+        return json.loads(path.read_text())
+    plan = read(root / 'plan.json', {'jobs': []})
+    live = read(root / 'progress.json', {})
+    saved = read(root / 'run-status.json', {})
+    profile = live.get('profile_id', '')
+    if profile and not re.fullmatch('[a-f0-9]{12,64}', profile):
+        raise ValueError('invalid recorded OCR profile')
+    totals = {'medical': {}, 'nonmedical': {}}; selected = []; absent = []
+    output_count = 0
+    for job in plan['jobs']:
+        jid = job.get('id', '')
+        if not re.fullmatch('[a-f0-9]{16,64}', jid):
+            raise ValueError('invalid study job id')
+        kind = 'medical' if any(p.startswith(('医学教科書/', '医師国家試験/')) for p in job.get('sd_epubs', [])) else 'nonmedical'
+        folder = root / 'books' / jid / profile
+        record = read(folder / 'job.json', {}) if profile else {}
+        state = record.get('status', 'pending' if profile else 'unknown_profile')
+        totals[kind][state] = totals[kind].get(state, 0) + 1
+        if scope != 'all' and kind != scope:
+            continue
+        selected.append(jid)
+        if state == 'converted_draft':
+            missing = 0
+            for original in record.get('outputs', []):
+                marker = '/books/' + jid + '/' + profile + '/'
+                relative = original.split(marker, 1)[-1] if marker in original else original
+                target = (folder / relative).resolve()
+                if target.is_relative_to(folder.resolve()) and target.suffix.lower() == '.epub' and target.is_file():
+                    output_count += 1
+                else:
+                    missing += 1
+            if missing:
+                absent.append({'job_id': jid, 'title': job.get('title'), 'missing_outputs': missing})
+    counts = {}
+    for kind, values in totals.items():
+        if scope in ('all', kind):
+            for key, value in values.items():counts[key] = counts.get(key, 0) + value
+    processes = []
+    for path in Path('/proc').glob('[0-9]*/cmdline'):
+        try:
+            if path.stat().st_uid != os.getuid():continue
+            argv = [os.fsdecode(x) for x in path.read_bytes().split(b'\0') if x]
+            if not argv or not Path(argv[0]).name.lower().startswith('python'):continue
+            scripts = {Path(x).name for x in argv[1:]}
+            if 'yomitoku_worker.py' in scripts or ('convert_study_materials.py' in scripts and 'run' in argv):
+                processes.append(int(path.parent.name))
+        except (OSError, ValueError):continue
+    free = shutil.disk_usage(REPO).free
+    return {'data_present': (root / 'plan.json').is_file(), 'scope': scope, 'planned_jobs': len(selected), 'counts': counts, 'all_plan_jobs': len(plan['jobs']),
+            'all_scope_counts': totals, 'profile_id': profile or None,
+            'saved_progress': live, 'progress_in_scope': live.get('job_id') in selected,
+            'saved_run_status': {k: saved.get(k) for k in ('status', 'updated_at', 'completed_jobs', 'publication_status')},
+            'present_completed_epub_files': output_count, 'completed_records_with_missing_files': absent[:20],
+            'free_gib_now': round(free / 1024**3, 2), 'related_conversion_process_ids': processes,
+            'gpu_program_support': {'devices': ['cpu', 'mps', 'cuda', 'auto'], 'default': 'cpu',
+                'cuda_arguments': ['--device', 'cuda', '--yomitoku-python', '/opt/secretary-ocr/bin/python']},
+            'notes': 'Counts are planned conversion jobs, not distinct books or original catalog groups. '
+                     'Saved progress is historical and does not prove a run is active. Converted drafts are unreviewed. '
+                     'Mac paths and path-derived job IDs need reconciliation before resuming on Linux. '
+                     'GPU availability must be checked with gpu_diagnostics, not the isolated shell. No conversion was started.'}
+
+
+def gpu_diagnostics():
+    code = '''import json,importlib.metadata
+d={}
+try:
+ import torch
+ d.update(torch_version=torch.__version__,compiled_cuda=torch.version.cuda,cuda_available=torch.cuda.is_available(),device_count=torch.cuda.device_count())
+ d['yomitoku_version']=importlib.metadata.version('yomitoku')
+ if d['cuda_available']:
+  d['gpu_name']=torch.cuda.get_device_name(0)
+  d['cuda_calculation_ok']=(torch.ones(1,device='cuda')+1).item()==2
+except Exception as e:d['error']=type(e).__name__+': '+str(e)[:500]
+print(json.dumps(d))'''
+    try:
+        result = subprocess.run(['/opt/secretary-ocr/bin/python', '-c', code],
+                                capture_output=True, text=True, timeout=45)
+        data = json.loads(result.stdout.strip().splitlines()[-1]) if result.stdout.strip() else {}
+        return {'ocr_runtime': data, 'exit_code': result.returncode,
+                'notes': 'Measured in the MCP/OCR environment, not the shell sandbox. Only a tiny CUDA calculation was run; no OCR, model download or conversion restart. Process exit releases its GPU memory.'}
+    except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+        return {'ocr_runtime': {}, 'error': type(error).__name__, 'notes': 'Probe failed; do not infer that the host has no GPU.'}
+
+
 def list_epubs(query='', directory='', source='repository', limit=20):
     roots = {'repository': REPO, 'documents': DOCS}
     if source not in roots or not isinstance(query, str) or len(query) > 200:
@@ -228,6 +321,7 @@ def list_epubs(query='', directory='', source='repository', limit=20):
     if not folder.is_dir():
         return {'items': [], 'total_matches': 0, 'truncated': False}
     titles = {}
+    study_titles = {}
     manifest = REPO / 'data/novels/candidates.json'
     if source == 'repository' and manifest.is_file() and not manifest.is_symlink() and manifest.resolve().is_relative_to(root) and manifest.stat().st_size <= 16 * 1024 * 1024:
         try:
@@ -235,6 +329,12 @@ def list_epubs(query='', directory='', source='repository', limit=20):
                       for w in json.loads(manifest.read_text()).get('works', [])}
         except (OSError, ValueError, KeyError, TypeError):
             titles = {}
+    study_plan = REPO / 'data/study/text-reflow-library/plan.json'
+    if source == 'repository' and study_plan.is_file() and not study_plan.is_symlink() and study_plan.resolve().is_relative_to(root) and study_plan.stat().st_size <= 16 * 1024 * 1024:
+        try:
+            study_titles = {j['id']: str(j.get('title', ''))[:200] for j in json.loads(study_plan.read_text()).get('jobs', [])}
+        except (OSError, ValueError, KeyError, TypeError):
+            study_titles = {}
     found = []
     for base, dirs, files in os.walk(folder, followlinks=False):
         dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ('node_modules', 'venv', '__pycache__') and not d.endswith('-venv')]
@@ -250,6 +350,8 @@ def list_epubs(query='', directory='', source='repository', limit=20):
                 continue
             relative = path.relative_to(root).as_posix()
             title = titles.get(path.stem.lower(), '') if relative.startswith('data/novels/') else ''
+            if relative.startswith('data/study/text-reflow-library/books/'):
+                title = study_titles.get(Path(relative).parts[4], '')
             if query.casefold() not in (relative + ' ' + title).casefold():
                 continue
             found.append({'path': relative, 'filename': name, 'title': title, 'bytes': info.st_size,
@@ -420,6 +522,9 @@ def specs():
     args = {'type': 'array', 'items': string, 'maxItems': 100}
     definitions = [
         ('catalog', '利用可能なKarakeepツールと制約を一覧表示する。実行しない。', {}, []),
+        ('study_status', '医学書・学習教材EPUBの変換進捗、医学/非医学別件数、保存済み停止位置、出力ファイルと現在の空き容量を読む。statusの汎用runやshell探索は不要。変換は起動しない。',
+         {'scope': {'type': 'string', 'enum': ['medical', 'nonmedical', 'all']}}, []),
+        ('gpu_diagnostics', 'OCR用Pythonの実環境でTorch/CUDA/YomiTokuと小さなGPU計算を確認。隔離shellでGPUなしと誤判定しない。任意コマンドやOCRは実行しない。', {}, []),
         ('list_epubs', 'ローカルEPUBの一覧・検索。ファイル名、保存先、サイズと既知のなろう作品名だけを返す。本文は読まない。ダウンロード対象の保存先探しに使い、shell検索をしない。',
          {'query': string, 'directory': string, 'source': {'type': 'string', 'enum': ['repository', 'documents']},
           'limit': {'type': 'integer', 'minimum': 1, 'maximum': 100}}, []),
@@ -460,6 +565,10 @@ def specs():
 
 
 def invoke(name, args):
+    if name == 'study_status':
+        return study_status(args.get('scope', 'medical'))
+    if name == 'gpu_diagnostics':
+        return gpu_diagnostics()
     if name == 'list_epubs':
         return list_epubs(args.get('query', ''), args.get('directory', ''), args.get('source', 'repository'), args.get('limit', 20))
     if name == 'export_epub':
