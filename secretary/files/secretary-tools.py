@@ -137,10 +137,8 @@ def check_legacy_access(path, args):
     validate_args(args)
     if args == ['--help']:
         return
-    if path == 'study/convert_study_materials.py' and args and args[0] == 'run' and any(
-        x == '--pages' or x.startswith('--pages=') for x in args
-    ):
-        raise ValueError('Use study_sample for bounded OCR trials; generic parallel sample runs are disabled')
+    if path == 'study/convert_study_materials.py' and args and args[0] == 'run':
+        raise ValueError('Use study_sample for trials; full resume uses the operator-managed secretary/study-resume workflow with verified migrated caches and dependency checks')
     if path in ('tools/karakeep/sync_nas_pdfs_to_karakeep.py', 'tools/karakeep/recrawl/recrawl.sh') and '--dry-run' not in args:
         raise ValueError('This legacy write batch is restricted to --dry-run; use scoped plans for supported changes')
     if path == 'tools/karakeep/recrawl/manage_list.sh' and (not args or args[0] not in ('status', 'show-list')):
@@ -258,7 +256,7 @@ def active_ocr_processes():
             continue
         try:
             script, _ = python_script((entry / 'cmdline').read_bytes().split(b'\0'))
-            if script in ('convert_study_materials.py', 'yomitoku_worker.py'):
+            if script in ('convert_study_materials.py', 'yomitoku_worker.py', 'study-resume.py'):
                 found.append(int(entry.name))
         except OSError:
             continue
@@ -365,7 +363,8 @@ def recent_study_samples():
 def study_status(scope='medical'):
     if scope not in ('medical', 'nonmedical', 'all'):
         raise ValueError('scope must be medical, nonmedical or all')
-    root = within(REPO, 'data/study/text-reflow-library')
+    resumed = within(REPO, 'data/study/text-reflow-linux')
+    root = resumed if (resumed / 'migration.json').is_file() else within(REPO, 'data/study/text-reflow-library')
     def read(path, default):
         if not path.exists():
             return default
@@ -419,7 +418,8 @@ def study_status(scope='medical'):
         except (OSError, ValueError):continue
     free = shutil.disk_usage(REPO).free
     return {'data_present': (root / 'plan.json').is_file(), 'scope': scope, 'planned_jobs': len(selected), 'counts': counts, 'all_plan_jobs': len(plan['jobs']),
-            'all_scope_counts': totals, 'profile_id': profile or None,
+            'all_scope_counts': totals, 'profile_id': profile or None, 'output_root': str(root),
+            'migration': read(root / 'migration.json', None),
             'saved_progress': live, 'progress_in_scope': live.get('job_id') in selected,
             'saved_run_status': {k: saved.get(k) for k in ('status', 'updated_at', 'completed_jobs', 'publication_status')},
             'present_completed_epub_files': output_count, 'completed_records_with_missing_files': absent[:20],
@@ -431,7 +431,7 @@ def study_status(scope='medical'):
                 'cuda_arguments': ['--device', 'cuda', '--yomitoku-python', '/opt/secretary-ocr/bin/python']},
             'notes': 'Counts are planned conversion jobs, not distinct books or original catalog groups. '
                      'Saved progress is historical and does not prove a run is active. Converted drafts are unreviewed. '
-                     'Mac paths and path-derived job IDs need reconciliation before resuming on Linux. '
+                     'Imported Mac paths/IDs require verified migration; migration describes the separate Linux resume library when prepared. '
                      'An OCR worker alone may be idle and does not prove conversion is running. '
                      'GPU availability must be checked with gpu_diagnostics, not the isolated shell. No conversion was started.'}
 
@@ -522,12 +522,13 @@ def list_epubs(query='', directory='', source='repository', limit=20):
                       for w in json.loads(manifest.read_text()).get('works', [])}
         except (OSError, ValueError, KeyError, TypeError):
             titles = {}
-    study_plan = REPO / 'data/study/text-reflow-library/plan.json'
-    if source == 'repository' and study_plan.is_file() and not study_plan.is_symlink() and study_plan.resolve().is_relative_to(root) and study_plan.stat().st_size <= 16 * 1024 * 1024:
-        try:
-            study_titles = {j['id']: str(j.get('title', ''))[:200] for j in json.loads(study_plan.read_text()).get('jobs', [])}
-        except (OSError, ValueError, KeyError, TypeError):
-            study_titles = {}
+    for library in ('text-reflow-library', 'text-reflow-linux'):
+        study_plan = REPO / 'data/study' / library / 'plan.json'
+        if source == 'repository' and study_plan.is_file() and not study_plan.is_symlink() and study_plan.resolve().is_relative_to(root) and study_plan.stat().st_size <= 16 * 1024 * 1024:
+            try:
+                study_titles.update({j['id']: str(j.get('title', ''))[:200] for j in json.loads(study_plan.read_text()).get('jobs', [])})
+            except (OSError, ValueError, KeyError, TypeError):
+                pass
     found = []
     for base, dirs, files in os.walk(folder, followlinks=False):
         dirs[:] = [d for d in dirs if not d.startswith('.') and d not in ('node_modules', 'venv', '__pycache__') and not d.endswith('-venv')]
@@ -543,7 +544,7 @@ def list_epubs(query='', directory='', source='repository', limit=20):
                 continue
             relative = path.relative_to(root).as_posix()
             title = titles.get(path.stem.lower(), '') if relative.startswith('data/novels/') else ''
-            if relative.startswith('data/study/text-reflow-library/books/'):
+            if relative.startswith(('data/study/text-reflow-library/books/', 'data/study/text-reflow-linux/books/')):
                 title = study_titles.get(Path(relative).parts[4], '')
             if query.casefold() not in (relative + ' ' + title).casefold():
                 continue

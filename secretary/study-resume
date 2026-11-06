@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Run on the development host after pulling this repository.
+set -euo pipefail
+[ "$#" -eq 1 ] || { echo 'usage: secretary/study-resume {plan|prepare|start|status}' >&2; exit 2; }
+case "$1" in
+  plan|prepare)
+    exec systemd-inhibit --what=sleep --mode=block --why='Verify and migrate secretary study library' \
+      incus exec secretary-dev -- runuser -u secretary -- \
+      /opt/secretary-tools/bin/python /opt/secretary/study-resume.py "$1"
+    ;;
+  start)
+    exec systemd-run --user --unit=secretary-study-resume --collect \
+      systemd-inhibit --what=sleep --mode=block --why='Secretary study EPUB conversion' \
+      incus exec secretary-dev -- runuser -u secretary -- \
+      /opt/secretary-tools/bin/python /opt/secretary/study-resume.py run
+    ;;
+  status)
+    systemctl --user status secretary-study-resume --no-pager || true
+    exec incus exec secretary-dev -- runuser -u secretary -- \
+      /opt/secretary-tools/bin/python /opt/secretary/study-resume.py status
+    ;;
+  *) echo 'usage: secretary/study-resume {plan|prepare|start|status}' >&2; exit 2 ;;
+esac

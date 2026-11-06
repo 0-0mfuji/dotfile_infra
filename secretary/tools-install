@@ -33,7 +33,7 @@ else
 fi
 apt-get update
 install -d -m 700 /var/backups/secretary
-apt-get install -y python3-venv python3-dev build-essential nodejs npm jq chromium default-jdk-headless fonts-noto-cjk fonts-dejavu-core libcuda1 nvidia-smi
+apt-get install -y python3-venv python3-dev build-essential nodejs npm jq chromium default-jdk-headless fonts-noto-cjk fonts-dejavu-core libcuda1 nvidia-smi tesseract-ocr tesseract-ocr-jpn tesseract-ocr-eng
 for group in video render; do
   if getent group "$group" >/dev/null; then usermod -aG "$group" secretary; fi
 done
@@ -92,7 +92,7 @@ snapshot_download(repo_id=sys.argv[1], revision=sys.argv[2],
 from pathlib import Path
 Path('/opt/secretary/plamo.revision').write_text(sys.argv[2]+'\n')
 PY
-for file in secretary-tools.py plamo-translate.py import-tool-data.py; do
+for file in secretary-tools.py plamo-translate.py import-tool-data.py study-resume.py; do
   install -m 644 "$DIR/files/$file" /opt/secretary/
 done
 install -m 644 "$DIR/tooling/catalog.json" /opt/secretary/catalog.json
