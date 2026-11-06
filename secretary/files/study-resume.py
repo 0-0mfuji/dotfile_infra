@@ -96,6 +96,15 @@ def migration_plan(plan):
                 dependencies[key] = digest(REPO / 'data/study' / values[key])
         if dependencies != data.get('dependencies', {}):
             raise ValueError('auxiliary source checksum mismatch: ' + str(source))
+        old_repo = Path(data['job']['path'].split('/data/study/', 1)[0])
+        old_folder = old_repo / 'data/study/text-reflow-library/books' / record.parent.parent.name / record.parent.name
+        final = DEST / 'books' / job['id'] / PROFILE_ID
+        if data['status'] == 'converted_draft' and not data.get('outputs'):
+            raise ValueError('completed record has no outputs')
+        for output in data.get('outputs', []):
+            mapped = Path(remap(output, old_folder, final, old_repo)).resolve()
+            if not mapped.is_relative_to(final.resolve()) or not (record.parent / mapped.relative_to(final.resolve())).is_file():
+                raise ValueError('imported output missing or outside its conversion folder: ' + output)
         records.append((record, data, job))
     if not records:
         raise ValueError('no verified imported records found')
@@ -118,6 +127,9 @@ def copy_independent(source, target):
 
 def remap(value, old_folder, new_folder, old_repo):
     if isinstance(value, str):
+        relative_folder = str(old_folder.relative_to(old_repo))
+        if value == relative_folder or value.startswith(relative_folder + '/'):
+            return str(new_folder) + value[len(relative_folder):]
         if value == str(old_folder) or value.startswith(str(old_folder) + '/'):
             return str(new_folder) + value[len(str(old_folder)):]
         if value == str(old_repo) or value.startswith(str(old_repo) + '/'):

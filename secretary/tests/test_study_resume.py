@@ -30,7 +30,7 @@ class MigrationTests(unittest.TestCase):
         job = {'id': 'linux-id', 'path': str(source), 'source_type': 'single_source', 'sd_epubs': ['医学教科書/book.epub']}
         record = {'job': {**job, 'id': 'mac-id', 'path': str(mac_repo / 'data/study/sources/book.pdf')},
                   'profile': profile, 'status': 'converted_draft', 'dependencies': {},
-                  'source_sha256': resume.digest(source), 'outputs': [str(mac_folder / 'horizontal.epub')]}
+                  'source_sha256': resume.digest(source), 'outputs': [str((mac_folder / 'horizontal.epub').relative_to(mac_repo))]}
         (folder / 'job.json').write_text(json.dumps(record))
         plan = {'jobs': [job], 'missing': [{'source': 'unavailable.pdf'}]}
         return old, folder, source, plan
