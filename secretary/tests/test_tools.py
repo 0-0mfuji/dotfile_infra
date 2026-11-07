@@ -91,11 +91,12 @@ class DiscoveryTests(unittest.TestCase):
                 '2': ['/opt/secretary-tools/bin/python', '-u', '/repo/study/convert_study_materials.py', 'run'],
                 '3': ['/usr/bin/python3', '-c', 'print("convert_study_materials.py")'],
                 '4': ['/usr/bin/python3', '/opt/secretary/secretary-tools.py', 'mcp'],
+                '5': ['/opt/secretary-tools/bin/python', '-u', '/repo/books/narou_library.py', 'download', '--execute'],
             }
             for pid, argv in commands.items():
                 (root / pid).mkdir()
                 (root / pid / 'cmdline').write_bytes(b'\0'.join(x.encode() for x in argv))
-            self.assertEqual(sorted(idle.active_jobs(root)), ['1', '2'])
+            self.assertEqual(sorted(idle.active_jobs(root)), ['1', '2', '5'])
 
     def test_metadata_search_excludes_hidden_symlinks_and_is_bounded(self):
         with tempfile.TemporaryDirectory() as folder:

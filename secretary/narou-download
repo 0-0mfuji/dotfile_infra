@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Host entry point: continue the fixed candidate library outside the chat process.
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DIR/versions.env"
+[ "$#" -eq 1 ] || { echo 'usage: secretary/narou-download {start|status}' >&2; exit 2; }
+case "$1" in
+  start)
+    if systemctl --user is-active --quiet secretary-narou-download; then
+      echo 'Narou download already running; no duplicate was started'
+      exit 0
+    fi
+    incus exec secretary-dev -- runuser -u secretary -- /usr/bin/python3 - "$NOVEL_DOWNLOADER_PATCHED_SHA256" <<'PY'
+import hashlib, importlib.util, sys
+from pathlib import Path
+spec = importlib.util.spec_from_file_location('tools', '/opt/secretary/secretary-tools.py')
+tools = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(tools)
+status = tools.narou_status()
+if status['running_process_ids']:
+    raise SystemExit('An acquisition process is already running')
+target = Path('/srv/secretary/karakeep-tool/novel_downloader/novel_downloader.py')
+if not target.is_file() or hashlib.sha256(target.read_bytes()).hexdigest() != sys.argv[1]:
+    raise SystemExit('Pinned downloader missing or modified; run secretary/provision-narou')
+PY
+    loginctl enable-linger "$(id -un)"
+    exec systemd-run --user --unit=secretary-narou-download --collect \
+      systemd-inhibit --what=sleep --mode=block --why='Secretary sequential Narou acquisition' \
+      incus exec secretary-dev -- runuser -u secretary -- \
+      /opt/secretary-tools/bin/python -u /srv/secretary/karakeep-tool/books/narou_library.py \
+      download --execute --limit 2000 --delay 3 --reserve-gib 5
+    ;;
+  status)
+    systemctl --user status secretary-narou-download --no-pager || true
+    exec incus exec secretary-dev -- runuser -u secretary -- /usr/bin/python3 - <<'PY'
+import importlib.util, json
+spec = importlib.util.spec_from_file_location('tools', '/opt/secretary/secretary-tools.py')
+tools = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(tools)
+print(json.dumps(tools.narou_status(), ensure_ascii=False, indent=2))
+PY
+    ;;
+  *) echo 'usage: secretary/narou-download {start|status}' >&2; exit 2 ;;
+esac

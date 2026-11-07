@@ -16,7 +16,7 @@ def active_jobs(proc=Path('/proc')):
         if not argv or not Path(argv[0]).name.startswith('python'):
             continue
         scripts = [Path(x).name for x in argv[1:3]]
-        if (any(x in scripts for x in ('convert_study_materials.py', 'yomitoku_worker.py', 'plamo-translate.py', 'study-resume.py'))
+        if (any(x in scripts for x in ('convert_study_materials.py', 'yomitoku_worker.py', 'plamo-translate.py', 'study-resume.py', 'narou_library.py', 'novel_downloader.py'))
                 or ('secretary-tools.py' in scripts and 'worker' in argv[2:4])):
             found.append(entry.name)
     return found
