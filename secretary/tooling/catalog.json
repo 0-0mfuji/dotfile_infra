@@ -1,6 +1,6 @@
 {
   "repository": "git@github.com:0-0mfuji/Karakeep-tool.git",
-  "commit": "c122bbd43289e57e4012f670577bbd3bd682cfc2",
+  "commit": "f1e2ae361ab6f38771b715e920828f002b2eaa9e",
   "tools": [
     {
       "path": "books/aozora_to_epub.py",
@@ -483,7 +483,7 @@
       "name": "kt-build-gemini-reflow",
       "description": "Build draft horizontal/vertical EPUBs and a source comparison from Gemini blocks.",
       "helper": false,
-      "sha256": "1107c325baa6ba093aa6e16b03a733c8cc3aa2a6322b9645b64ee6dd85cd11c3",
+      "sha256": "cbc704acde322bde7eaaa77d61253605a06f2844922918e1e1ac65adcf2f6053",
       "options": [
         "--defer-reading-flow",
         "--no-preview",
@@ -790,7 +790,7 @@
       "name": "kt-convert-study-materials",
       "description": "Plan/run/resume all study-material OCR. Personal noncommercial use; no SD writes.",
       "helper": false,
-      "sha256": "87cec65de875d60dfa023ba4199a237cb0984ec6fc5fd53bdb85b0ffdf3c4927",
+      "sha256": "de202202902526791d2205edde488198edf930e93f7fe682e8148dafaae4e9b1",
       "options": [
         "--book-title",
         "--catalog",
@@ -1410,18 +1410,14 @@
       "name": "kt-repair-study-display",
       "description": "Rebuild already generated study volumes from cached OCR, without new requests.",
       "helper": false,
-      "sha256": "f6c216047d82dc1d55e4379725f7eb5e032ba593a889e3aa43663278a2453f57",
+      "sha256": "9a36cd3f70500504183a86f6c6e80d15b5f333608d0c923dc78eba5587cf3cfa",
       "options": [
         "--backup-dir",
-        "--defer-reading-flow",
         "--force",
         "--from-backup",
-        "--no-preview",
-        "--output",
-        "--pages",
         "--prose-only",
+        "--questions-only",
         "--root",
-        "--title",
         "--volume-folder"
       ],
       "notes": [
@@ -2014,6 +2010,32 @@
       "options": [],
       "notes": [
         "Internal helper; existing repair-study-display entrypoint provides the supported operation"
+      ]
+    },
+    {
+      "path": "study/readable_epub_questions.py",
+      "name": "kt-readable-epub-questions",
+      "description": "Internal OCR question choice formatting; use repair_study_display --questions-only",
+      "helper": true,
+      "sha256": "312fc8f1b16ea968d8c9a7581a74781f4dc3f4ea35cca2adc31f5834646bab63",
+      "options": [
+        "--apply",
+        "--backup-dir",
+        "--report"
+      ],
+      "notes": [
+        "Preserves question content and original images; never infers missing choices or answers"
+      ]
+    },
+    {
+      "path": "study/test_readable_epub_questions.py",
+      "name": "kt-test-readable-epub-questions",
+      "description": "Internal OCR question choice formatting; use repair_study_display --questions-only",
+      "helper": true,
+      "sha256": "1b4a25cf25d9644c5a389592ee897588dc207b451f83a5b33abf16036e399566",
+      "options": [],
+      "notes": [
+        "Preserves question content and original images; never infers missing choices or answers"
       ]
     }
   ]
