@@ -1,6 +1,6 @@
 {
   "repository": "git@github.com:0-0mfuji/Karakeep-tool.git",
-  "commit": "426c0ada1b6cd57ac92d99bf56fed6beedf5e234",
+  "commit": "e386d405e7689216d89e45e007c4cf7c3cbef50e",
   "tools": [
     {
       "path": "books/aozora_to_epub.py",
@@ -2046,7 +2046,7 @@
       "name": "kt-readable-epub-english",
       "description": "Internal source-confirmed English word wrap repair",
       "helper": true,
-      "sha256": "db1d85890da8c6b7dfe30d5105f0b465dd5debf4c666c3bcef82d76b0c421d1e",
+      "sha256": "64318d3e5286798b27f0534bee82ff223d3fe8f897121dc39836d51ba4d1d45a",
       "options": [
         "--apply",
         "--backup-dir",
@@ -2063,7 +2063,7 @@
       "name": "kt-test-readable-epub-english",
       "description": "Internal source-confirmed English word wrap repair",
       "helper": true,
-      "sha256": "fb534b611c25ab69a03cd03a66377b202ae88a9f6e3eb9aa2755f2d2686c4a47",
+      "sha256": "adf53d0128266eeb2997ae4024baf3af3afd15d5d143b65cc7f3f7e075673744",
       "options": [],
       "notes": [
         "Leaves uncertain compound words unchanged"
