@@ -1,6 +1,6 @@
 {
   "repository": "git@github.com:0-0mfuji/Karakeep-tool.git",
-  "commit": "f1e2ae361ab6f38771b715e920828f002b2eaa9e",
+  "commit": "b9940fed08750941d61239d2540e8631576fff67",
   "tools": [
     {
       "path": "books/aozora_to_epub.py",
@@ -2017,7 +2017,7 @@
       "name": "kt-readable-epub-questions",
       "description": "Internal OCR question choice formatting; use repair_study_display --questions-only",
       "helper": true,
-      "sha256": "312fc8f1b16ea968d8c9a7581a74781f4dc3f4ea35cca2adc31f5834646bab63",
+      "sha256": "2b2511f5c96f245b2968b92076d909942bc524ff830bc664ed1de2f83cba0fa9",
       "options": [
         "--apply",
         "--backup-dir",
@@ -2032,7 +2032,7 @@
       "name": "kt-test-readable-epub-questions",
       "description": "Internal OCR question choice formatting; use repair_study_display --questions-only",
       "helper": true,
-      "sha256": "1b4a25cf25d9644c5a389592ee897588dc207b451f83a5b33abf16036e399566",
+      "sha256": "5892bd0480c7dc6153f91f3d685c8d318dfac49a3ae003247091d936223c31cd",
       "options": [],
       "notes": [
         "Preserves question content and original images; never infers missing choices or answers"
