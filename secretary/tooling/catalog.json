@@ -1,6 +1,6 @@
 {
   "repository": "git@github.com:0-0mfuji/Karakeep-tool.git",
-  "commit": "aa41c3a71fc9f1ea5ea68f8fb33dd90da921d3d2",
+  "commit": "426c0ada1b6cd57ac92d99bf56fed6beedf5e234",
   "tools": [
     {
       "path": "books/aozora_to_epub.py",
@@ -483,7 +483,7 @@
       "name": "kt-build-gemini-reflow",
       "description": "Build draft horizontal/vertical EPUBs and a source comparison from Gemini blocks.",
       "helper": false,
-      "sha256": "80639cca8624696b84756a10bdaf4e67206af9b49c06ee8bdbb0f3bbf5c8224c",
+      "sha256": "d3029827249190d08739238961b5124c213d18b118fbc211017d5891f30e1760",
       "options": [
         "--defer-reading-flow",
         "--no-preview",
@@ -790,7 +790,7 @@
       "name": "kt-convert-study-materials",
       "description": "Plan/run/resume all study-material OCR. Personal noncommercial use; no SD writes.",
       "helper": false,
-      "sha256": "450a6de03f0fc430c6e927740c9e677531bff238cba4033f256a88c86116b48a",
+      "sha256": "43ecf14cf91f6819b3e12b0b4c5a4482226551b2c57dfaf1b16e05709097ce0d",
       "options": [
         "--book-title",
         "--catalog",
@@ -1410,12 +1410,13 @@
       "name": "kt-repair-study-display",
       "description": "Rebuild already generated study volumes from cached OCR, without new requests.",
       "helper": false,
-      "sha256": "997993c3a9377bdea0ea0ddaccb1fbab155941cf55df24f0cad670780644bbc8",
+      "sha256": "57416440944ed003e2841fdaff621271462af874b97f6be427eb053802e3fa04",
       "options": [
         "--backup-dir",
         "--english-only",
         "--force",
         "--from-backup",
+        "--iroha-only",
         "--prose-only",
         "--questions-only",
         "--root",
@@ -2066,6 +2067,32 @@
       "options": [],
       "notes": [
         "Leaves uncertain compound words unchanged"
+      ]
+    },
+    {
+      "path": "study/readable_epub_iroha.py",
+      "name": "kt-readable-epub-iroha",
+      "description": "Internal unambiguous Japanese イロハニ choice formatting",
+      "helper": true,
+      "sha256": "e7d508f5fe9794f6b87eb203b465717f0f38ce06348d15eda0342b160c82f1bc",
+      "options": [
+        "--apply",
+        "--backup-dir",
+        "--report"
+      ],
+      "notes": [
+        "Preserves figures and ambiguous table layouts"
+      ]
+    },
+    {
+      "path": "study/test_readable_epub_iroha.py",
+      "name": "kt-test-readable-epub-iroha",
+      "description": "Internal unambiguous Japanese イロハニ choice formatting",
+      "helper": true,
+      "sha256": "7a3b6552aa8cf99074de36578ae61c7d9c84edfd2804c60fcb930e3455a89858",
+      "options": [],
+      "notes": [
+        "Preserves figures and ambiguous table layouts"
       ]
     }
   ]
