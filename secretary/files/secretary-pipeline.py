@@ -86,7 +86,8 @@ def medical():
     if not pending:
         return
     # One converter invocation reuses its persistent OCR worker and page caches.
-    command = [PYTHON, str(converter), 'run', '--input', *map(str, pending),
+    command = [PYTHON, str(converter), 'run',
+               *[argument for path in pending for argument in ('--input', str(path))],
                '--output', str(REPO / 'data/study/medical-auto'), '--device', 'cuda',
                '--engine', 'yomitoku', '--offline', '--dpi', '300',
                '--yomitoku-python', '/opt/secretary-ocr/bin/python', '--java', '/usr/bin/java',
@@ -110,7 +111,7 @@ def narou():
     if status['not_completed'] == 0 and status['candidate_count']:
         record('narou', 'completed', completed=status['completed_candidates'])
         return
-    versions = dict(line.split('=', 1) for line in (INSTALL / 'versions.env').read_text().splitlines()
+    versions = dict(line.split('=', 1) for line in (INSTALL / 'pipeline-versions.env').read_text().splitlines()
                     if line and not line.startswith('#') and '=' in line)
     downloader = REPO / 'novel_downloader/novel_downloader.py'
     if digest(downloader) != versions['NOVEL_DOWNLOADER_PATCHED_SHA256'].strip('"\''):

@@ -6,6 +6,7 @@ instance=secretary-dev
 stage="$(incus exec "$instance" -- mktemp -d /tmp/secretary-pipeline.XXXXXXXX)"
 trap 'incus exec "$instance" -- rm -rf "$stage"' EXIT
 incus exec "$instance" -- mkdir "$stage/files"
+incus file push "$DIR/versions.env" "$instance$stage/versions.env"
 incus file push "$DIR/pipeline-install" "$instance$stage/pipeline-install"
 for file in secretary-pipeline.py secretary-pipeline-upload.py plamo-translate.py secretary-tools.py secretary-pipeline.conf secretary-pipeline-gpu.service secretary-pipeline-narou.service secretary-pipeline-upload.service secretary-pipeline-upload.timer; do
   incus file push "$DIR/files/$file" "$instance$stage/files/$file"
