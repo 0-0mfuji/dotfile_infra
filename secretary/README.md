@@ -23,4 +23,4 @@ Macでは `dev secretary` でNanoMuseを開き、`dev secretary setup` で連携
 
 モデルや依存パッケージを変更しない `study/` の追加更新には、MacでKarakeep-toolの変更を公開し、このrepoの `versions.env` と `tooling/catalog.json` を更新・公開した後、サーバーで `git pull --ff-only`、`./secretary/update-tools-source` を実行できます。作業ツリーの変更・変換処理の実行中・巻き戻し・study外の変更がある場合は停止して保全します。無関係な取得処理やAIサービスは停止しません。その他の更新は通常のprovisionを使います。
 
-PLaMoモデルだけのリビジョン更新は、サーバーでこのrepoをpullした後 `sudo ./secretary/plamo-model-update` を使います。実行中の翻訳が共有ロックを保持している場合は更新を拒否します。新しい版を別ディレクトリに取得して検査してから切り替え、失敗時は現行版を残します。
+PLaMoモデルだけのリビジョン更新は、サーバーでこのrepoをpullした後 `./secretary/plamo-model-update` を使います。実行中の翻訳が共有ロックを保持している場合は更新を拒否します。新しい版を別ディレクトリに取得して検査してから切り替え、失敗時は現行版を残します。
