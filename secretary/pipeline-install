@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Inside secretary-dev, after files arrive from the pulled infrastructure checkout.
+set -euo pipefail
+[ "$(id -u)" -eq 0 ] || exit 1
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+getent group secretary-pipeline >/dev/null || groupadd --system secretary-pipeline
+install -d -m 2750 -o secretary -g secretary-pipeline /var/lib/secretary-pipeline
+for folder in outbox sentences epubs; do
+  install -d -m 2750 -o secretary -g secretary-pipeline "/var/lib/secretary-pipeline/$folder"
+done
+install -d -m 700 -o secretary-karakeep -g secretary-karakeep /var/lib/secretary-karakeep/translations
+for file in secretary-pipeline.py secretary-pipeline-upload.py plamo-translate.py secretary-tools.py; do
+  install -m 644 "$DIR/files/$file" "/opt/secretary/$file"
+done
+for unit in secretary-pipeline-gpu.service secretary-pipeline-narou.service secretary-pipeline-upload.service secretary-pipeline-upload.timer; do
+  install -m 644 "$DIR/files/$unit" /etc/systemd/system/
+done
+install -d -m 755 /etc/tmpfiles.d
+install -m 644 "$DIR/files/secretary-pipeline.conf" /etc/tmpfiles.d/
+systemd-tmpfiles --create /etc/tmpfiles.d/secretary-pipeline.conf
+systemctl daemon-reload
+systemctl enable secretary-pipeline-gpu.service secretary-pipeline-narou.service secretary-pipeline-upload.timer
+systemctl start secretary-pipeline-gpu.service secretary-pipeline-narou.service secretary-pipeline-upload.timer

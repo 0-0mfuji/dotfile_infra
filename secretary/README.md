@@ -24,3 +24,45 @@ Macでは `dev secretary` でNanoMuseを開き、`dev secretary setup` で連携
 モデルや依存パッケージを変更しない `study/` の追加更新には、MacでKarakeep-toolの変更を公開し、このrepoの `versions.env` と `tooling/catalog.json` を更新・公開した後、サーバーで `git pull --ff-only`、`./secretary/update-tools-source` を実行できます。作業ツリーの変更・変換処理の実行中・巻き戻し・study外の変更がある場合は停止して保全します。無関係な取得処理やAIサービスは停止しません。その他の更新は通常のprovisionを使います。
 
 PLaMoモデルだけのリビジョン更新は、サーバーでこのrepoをpullした後 `./secretary/plamo-model-update` を使います。実行中の翻訳が共有ロックを保持している場合は更新を拒否します。新しい版を別ディレクトリに取得して検査してから切り替え、失敗時は現行版を残します。
+
+### Container startup processing
+
+After updating the host checkout with `git pull --ff-only`, run
+`./secretary/pipeline-deploy`. It installs only inside `secretary-dev`.
+No host services or public ports are added.
+
+The container enables `secretary-pipeline-gpu.service` (medical examination
+PDFs first, then PLaMo English/Japanese article and Kandel copies),
+`secretary-pipeline-narou.service` (fixed existing 2,000-candidate library,
+3-second request delay), and `secretary-pipeline-upload.timer`.
+They resume on container boot; completed input hashes/output files are reused.
+GPU workers share the existing `translation.lock`. PLaMo retains its model in
+one process and checkpoints each sentence. Its source/model hash prevents
+using translations from a different input or model revision.
+
+`/var/lib/secretary-pipeline` holds status, logs, sentence caches, the fixed
+article snapshot, bilingual EPUBs and completed article outbox. Source PDFs,
+EPUBs and bookmarks are retained. OCR uses CUDA/300dpi/offline models and the
+existing X3/layout/readability conversion tools, without independent Tesseract
+comparison. Existing Linux results are verified against source hashes and
+output presence before skipping; missing medical files are processed separately
+in `data/study/medical-auto`. Low disk (6 GiB admission, 5 GiB OCR/download
+reserve) or a job error causes delayed retries with saved progress.
+
+Publisher credentials remain with `secretary-karakeep`. The AI user does not
+join its credential group. The publisher creates text bookmarks with original
+ID/source link, `【英日対訳】`, original tags plus `英日対訳` and `Plamo翻訳`,
+original manual list memberships, and original `createdAt` plus 5 seconds.
+Metadata/content are read back before completion. A durable create intent plus
+source/hash marker prevents blind duplicate creation if a response is lost.
+An ambiguous outcome requires operator reconciliation. Originals are not updated
+or deleted. Automated translation is a draft, not human or medical review.
+
+Status: `incus exec secretary-dev -- runuser -u secretary -- /opt/secretary-tools/bin/python /opt/secretary/secretary-pipeline.py status`.
+NanoMuse/DSH may use `secretary_tools`'s `pipeline_status` without a shell.
+Stop/resume with `systemctl stop/start secretary-pipeline-gpu.service
+secretary-pipeline-narou.service secretary-pipeline-upload.timer` inside the
+container. Stop `secretary-pipeline-upload.service` too if an upload is active.
+Disabling the corresponding units prevents startup on subsequent boots.
+The existing host idle policy detects GPU work and the existing OCR/download
+executables; this deployment does not alter the host suspend configuration.

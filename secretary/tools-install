@@ -139,3 +139,6 @@ if missing or library.errors:
 print('NanoMuse config valid; managed skills loaded:',len(expected))
 PY
 runuser -u secretary -- python3 /opt/secretary/secretary-tools.py doctor
+
+# Resume authorized personal processing on every container boot.
+bash "$DIR/pipeline-install"

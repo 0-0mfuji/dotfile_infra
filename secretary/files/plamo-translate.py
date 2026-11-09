@@ -8,7 +8,7 @@ import fcntl
 from pathlib import Path
 
 
-def translate(request, model_dir):
+def load_model(model_dir):
     import torch
     from transformers import AutoModelForCausalLM, AutoTokenizer
     if not torch.cuda.is_available():
@@ -19,6 +19,12 @@ def translate(request, model_dir):
         model_dir, trust_remote_code=True, local_files_only=True,
         dtype=torch.bfloat16, device_map='cuda',
     )
+    return tokenizer, model
+
+
+def translate(request, model_dir, session=None):
+    import torch
+    tokenizer, model = session if session is not None else load_model(model_dir)
     text = request['text']
     options = {'target_lang': request.get('target_lang', 'ja'), 'add_generation_prompt': True,
                'return_dict': True, 'return_tensors': 'pt'}
@@ -48,7 +54,7 @@ def translate(request, model_dir):
         if inputs['input_ids'].shape[1] > 4096:
             raise ValueError('context/glossary too large; reduce the request')
         with torch.inference_mode():
-            output = model.generate(**inputs, do_sample=False, max_new_tokens=3072)
+            output = model.generate(**inputs, do_sample=False, use_cache=True, max_new_tokens=3072)
         generated = output[0, inputs['input_ids'].shape[1]:]
         eos = model.generation_config.eos_token_id
         eos_ids = eos if isinstance(eos, list) else [eos]
@@ -63,6 +69,15 @@ if __name__ == '__main__':
     os.environ['TRANSFORMERS_OFFLINE'] = '1'
     with Path('/run/lock/secretary-plamo-model.lock').open('r') as model_lock:
         fcntl.flock(model_lock.fileno(), fcntl.LOCK_SH)
+        if '--stream' in sys.argv:
+            session = load_model('/var/lib/secretary-models/plamo-3-translate-2b')
+            for line in sys.stdin:
+                try:
+                    result = translate(json.loads(line), '/var/lib/secretary-models/plamo-3-translate-2b', session)
+                except Exception as error:
+                    result = {'error': type(error).__name__}
+                print(json.dumps(result, ensure_ascii=False), flush=True)
+            sys.exit(0)
         request = json.load(sys.stdin)
         result = translate(request, '/var/lib/secretary-models/plamo-3-translate-2b')
         target = Path(request['output'])

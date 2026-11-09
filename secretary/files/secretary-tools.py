@@ -784,6 +784,7 @@ def specs():
     string = {'type': 'string'}
     args = {'type': 'array', 'items': string, 'maxItems': 100}
     definitions = [
+        ('pipeline_status', 'コンテナ内のOCR・なろう・Plamo自動再開状態を読む。shellによる探索や起動は不要。', {}, []),
         ('catalog', '利用可能なKarakeepツールと制約を一覧表示する。実行しない。', {}, []),
         ('data_files', 'データ・文書のファイル名、相対パス、サイズを検索する。本文・隠しファイルは読まず、最大2万項目で停止。shellのfind/ls/grepで保存先を探す代わりに使う。truncatedならdirectoryを絞る。',
          {'query': string, 'directory': string, 'source': {'type': 'string', 'enum': ['repository', 'documents']},
@@ -837,6 +838,9 @@ def specs():
 
 
 def invoke(name, args):
+    if name == 'pipeline_status':
+        root = Path('/var/lib/secretary-pipeline')
+        return {p.stem: json.loads(p.read_text()) for p in root.glob('*-status.json')}
     if name == 'study_resume':
         return study_resume()
     if name == 'study_sample':
