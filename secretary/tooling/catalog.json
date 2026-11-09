@@ -1,6 +1,6 @@
 {
   "repository": "git@github.com:0-0mfuji/Karakeep-tool.git",
-  "commit": "268b0acc6ede3e62fda39f92894afb54838319bd",
+  "commit": "63b29b9b8e25cc6135f30ef8149c0c902451ea97",
   "tools": [
     {
       "path": "books/aozora_to_epub.py",
@@ -1410,11 +1410,12 @@
       "name": "kt-repair-study-display",
       "description": "Rebuild already generated study volumes from cached OCR, without new requests.",
       "helper": false,
-      "sha256": "e6448f7adc19c2781f980e258655232f79c041cc458f8a280420fe5b01d25237",
+      "sha256": "3a1ce8b4acbb5d6e4c564e74b52d2a574de7db399dfea1bb7f70ef4c9e1214eb",
       "options": [
         "--backup-dir",
         "--defer-reading-flow",
         "--force",
+        "--from-backup",
         "--no-preview",
         "--output",
         "--pages",
@@ -1993,10 +1994,11 @@
       "name": "kt-readable-epub-prose",
       "description": "Internal OCR prose finalization and its regression tests; use repair_study_display --prose-only",
       "helper": true,
-      "sha256": "44ade38e0175efe4bf62c28a3cde04d11736890c69d7c8753d28940a395b9d01",
+      "sha256": "d69ffe3aec9cfd41e5be899f3d2fa347f0b55e9c08a6ba75595158f9c468d546",
       "options": [
         "--apply",
         "--backup-dir",
+        "--from-backup",
         "--report"
       ],
       "notes": [
@@ -2008,7 +2010,7 @@
       "name": "kt-test-readable-epub-prose",
       "description": "Internal OCR prose finalization and its regression tests; use repair_study_display --prose-only",
       "helper": true,
-      "sha256": "0a1342e9a27ff762f3a7d74095d2c6c6de4c112f657cb1903e0f3882c2f4ab0f",
+      "sha256": "a7f15ea4e733c62fb21d3422fc82896b9791f1f3daf17eb649416eeb7d7f121b",
       "options": [],
       "notes": [
         "Internal helper; existing repair-study-display entrypoint provides the supported operation"
