@@ -83,16 +83,11 @@ chown -R secretary:secretary "$repo/.git"
 install -d -m 700 -o secretary -g secretary /home/secretary/.config/secretary/tool-jobs
 install -d -m 755 /var/lib/secretary-models
 install -d -m 700 -o secretary -g secretary /var/lib/secretary-models/cache /var/lib/secretary-models/numba
-# Download at deployment time, pinned revision; no network download during inference.
-/opt/secretary-plamo/bin/python - "$PLAMO_MODEL" "$PLAMO_REVISION" <<'PY'
-from huggingface_hub import snapshot_download
-import sys
-snapshot_download(repo_id=sys.argv[1], revision=sys.argv[2],
-                  local_dir='/var/lib/secretary-models/plamo-3-translate-2b',
-                  ignore_patterns=['*.gguf', '*.md', 'figures/*'])
-from pathlib import Path
-Path('/opt/secretary/plamo.revision').write_text(sys.argv[2]+'\n')
-PY
+if [ ! -e /run/lock/secretary-plamo-model.lock ]; then
+  touch /run/lock/secretary-plamo-model.lock
+  chmod 644 /run/lock/secretary-plamo-model.lock
+fi
+bash "$DIR/plamo-model-update"
 for file in secretary-tools.py plamo-translate.py import-tool-data.py study-resume.py study-control.py; do
   install -m 644 "$DIR/files/$file" /opt/secretary/
 done

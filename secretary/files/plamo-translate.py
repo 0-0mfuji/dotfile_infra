@@ -4,6 +4,7 @@
 import json
 import os
 import sys
+import fcntl
 from pathlib import Path
 
 
@@ -60,10 +61,12 @@ def translate(request, model_dir):
 if __name__ == '__main__':
     os.environ['HF_HUB_OFFLINE'] = '1'
     os.environ['TRANSFORMERS_OFFLINE'] = '1'
-    request = json.load(sys.stdin)
-    result = translate(request, '/var/lib/secretary-models/plamo-3-translate-2b')
-    target = Path(request['output'])
-    # Exclusive creation: never replace a source file or a previous translation.
-    with target.open('x', encoding='utf-8') as stream:
-        stream.write(result['text'])
+    with Path('/run/lock/secretary-plamo-model.lock').open('r') as model_lock:
+        fcntl.flock(model_lock.fileno(), fcntl.LOCK_SH)
+        request = json.load(sys.stdin)
+        result = translate(request, '/var/lib/secretary-models/plamo-3-translate-2b')
+        target = Path(request['output'])
+        # Exclusive creation: never replace a source file or a previous translation.
+        with target.open('x', encoding='utf-8') as stream:
+            stream.write(result['text'])
     print(json.dumps({k: v for k, v in result.items() if k != 'text'}))

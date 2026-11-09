@@ -1,6 +1,6 @@
 {
   "repository": "git@github.com:0-0mfuji/Karakeep-tool.git",
-  "commit": "e386d405e7689216d89e45e007c4cf7c3cbef50e",
+  "commit": "88ffaa02bc3a8ab274465a9ac4e9b279616af833",
   "tools": [
     {
       "path": "books/aozora_to_epub.py",
@@ -500,7 +500,7 @@
       "name": "kt-build-imported-textbooks",
       "description": "Faithful, chapter-organized X3 editions for imported scanned/diagram books.",
       "helper": false,
-      "sha256": "7208b6a0f4a2422421e9cd039fd68739c7acbfba84664dde3c4cfd05325862e3",
+      "sha256": "6e1f9a541a2845083e0fc2e2252ed662af7964011edad380cb307201660a2320",
       "options": [
         "--contains",
         "--sample-pages",
@@ -790,7 +790,7 @@
       "name": "kt-convert-study-materials",
       "description": "Plan/run/resume all study-material OCR. Personal noncommercial use; no SD writes.",
       "helper": false,
-      "sha256": "43ecf14cf91f6819b3e12b0b4c5a4482226551b2c57dfaf1b16e05709097ce0d",
+      "sha256": "ab27e5521c98dbb94f7f9461b2bfed742cdc129602c33d17ee8221ff9a146a05",
       "options": [
         "--book-title",
         "--catalog",
@@ -1302,6 +1302,69 @@
       ]
     },
     {
+      "path": "study/readable_epub_english.py",
+      "name": "kt-readable-epub-english",
+      "description": "Internal source-confirmed English word wrap repair",
+      "helper": true,
+      "sha256": "64318d3e5286798b27f0534bee82ff223d3fe8f897121dc39836d51ba4d1d45a",
+      "options": [
+        "--apply",
+        "--backup-dir",
+        "--base-map",
+        "--report",
+        "--source-map"
+      ],
+      "notes": [
+        "Leaves uncertain compound words unchanged"
+      ]
+    },
+    {
+      "path": "study/readable_epub_iroha.py",
+      "name": "kt-readable-epub-iroha",
+      "description": "Internal unambiguous Japanese イロハニ choice formatting",
+      "helper": true,
+      "sha256": "e7d508f5fe9794f6b87eb203b465717f0f38ce06348d15eda0342b160c82f1bc",
+      "options": [
+        "--apply",
+        "--backup-dir",
+        "--report"
+      ],
+      "notes": [
+        "Preserves figures and ambiguous table layouts"
+      ]
+    },
+    {
+      "path": "study/readable_epub_prose.py",
+      "name": "kt-readable-epub-prose",
+      "description": "Internal OCR prose finalization and its regression tests; use repair_study_display --prose-only",
+      "helper": true,
+      "sha256": "d69ffe3aec9cfd41e5be899f3d2fa347f0b55e9c08a6ba75595158f9c468d546",
+      "options": [
+        "--apply",
+        "--backup-dir",
+        "--from-backup",
+        "--report"
+      ],
+      "notes": [
+        "Internal helper; existing repair-study-display entrypoint provides the supported operation"
+      ]
+    },
+    {
+      "path": "study/readable_epub_questions.py",
+      "name": "kt-readable-epub-questions",
+      "description": "Internal OCR question choice formatting; use repair_study_display --questions-only",
+      "helper": true,
+      "sha256": "2b2511f5c96f245b2968b92076d909942bc524ff830bc664ed1de2f83cba0fa9",
+      "options": [
+        "--apply",
+        "--backup-dir",
+        "--report"
+      ],
+      "notes": [
+        "Preserves question content and original images; never infers missing choices or answers"
+      ]
+    },
+    {
       "path": "study/readable_epub_tables.py",
       "name": "kt-readable-epub-tables",
       "description": "Migrate generated coordinate-labelled OCR tables to readable row groups.",
@@ -1366,6 +1429,17 @@
       ]
     },
     {
+      "path": "study/rename_device_volumes.py",
+      "name": "kt-rename-device-volumes",
+      "description": "既存EPUBの複数巻ファイル名と表示タイトルを計画に沿ってステージする",
+      "helper": true,
+      "sha256": "3cd978a3b2109485664f3717700f930f55c567e41728ba98624b2dc1f6f0ddc9",
+      "options": [],
+      "notes": [
+        "レビュー済み計画を入力し、ステージ結果を検査してから反映する"
+      ]
+    },
+    {
       "path": "study/rename_structured_textbook_titles.py",
       "name": "kt-rename-structured-textbook-titles",
       "description": "Add explicit chapter ranges to structured medical EPUB display titles.",
@@ -1425,6 +1499,17 @@
       ],
       "notes": [
         "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/repartition_study_epubs.py",
+      "name": "kt-repartition-study-epubs",
+      "description": "ページ境界を検証した既存EPUBを内容別の巻へステージする",
+      "helper": true,
+      "sha256": "6a8ebd38dbd50425a3c6569c4ad41a851d9911a5531d2464b3f2cefc08e9682d",
+      "options": [],
+      "notes": [
+        "レビュー済み計画を入力し、ステージ結果を検査してから反映する"
       ]
     },
     {
@@ -1578,6 +1663,50 @@
       "options": [],
       "notes": [
         "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/test_readable_epub_english.py",
+      "name": "kt-test-readable-epub-english",
+      "description": "Internal source-confirmed English word wrap repair",
+      "helper": true,
+      "sha256": "adf53d0128266eeb2997ae4024baf3af3afd15d5d143b65cc7f3f7e075673744",
+      "options": [],
+      "notes": [
+        "Leaves uncertain compound words unchanged"
+      ]
+    },
+    {
+      "path": "study/test_readable_epub_iroha.py",
+      "name": "kt-test-readable-epub-iroha",
+      "description": "Internal unambiguous Japanese イロハニ choice formatting",
+      "helper": true,
+      "sha256": "7a3b6552aa8cf99074de36578ae61c7d9c84edfd2804c60fcb930e3455a89858",
+      "options": [],
+      "notes": [
+        "Preserves figures and ambiguous table layouts"
+      ]
+    },
+    {
+      "path": "study/test_readable_epub_prose.py",
+      "name": "kt-test-readable-epub-prose",
+      "description": "Internal OCR prose finalization and its regression tests; use repair_study_display --prose-only",
+      "helper": true,
+      "sha256": "a7f15ea4e733c62fb21d3422fc82896b9791f1f3daf17eb649416eeb7d7f121b",
+      "options": [],
+      "notes": [
+        "Internal helper; existing repair-study-display entrypoint provides the supported operation"
+      ]
+    },
+    {
+      "path": "study/test_readable_epub_questions.py",
+      "name": "kt-test-readable-epub-questions",
+      "description": "Internal OCR question choice formatting; use repair_study_display --questions-only",
+      "helper": true,
+      "sha256": "5892bd0480c7dc6153f91f3d685c8d318dfac49a3ae003247091d936223c31cd",
+      "options": [],
+      "notes": [
+        "Preserves question content and original images; never infers missing choices or answers"
       ]
     },
     {
@@ -1987,113 +2116,6 @@
       "sha256": "0c0309de957acdfc84ebc40fdcfa336154b30cb426851a406276ac1df60af064",
       "options": [],
       "notes": []
-    },
-    {
-      "path": "study/readable_epub_prose.py",
-      "name": "kt-readable-epub-prose",
-      "description": "Internal OCR prose finalization and its regression tests; use repair_study_display --prose-only",
-      "helper": true,
-      "sha256": "d69ffe3aec9cfd41e5be899f3d2fa347f0b55e9c08a6ba75595158f9c468d546",
-      "options": [
-        "--apply",
-        "--backup-dir",
-        "--from-backup",
-        "--report"
-      ],
-      "notes": [
-        "Internal helper; existing repair-study-display entrypoint provides the supported operation"
-      ]
-    },
-    {
-      "path": "study/test_readable_epub_prose.py",
-      "name": "kt-test-readable-epub-prose",
-      "description": "Internal OCR prose finalization and its regression tests; use repair_study_display --prose-only",
-      "helper": true,
-      "sha256": "a7f15ea4e733c62fb21d3422fc82896b9791f1f3daf17eb649416eeb7d7f121b",
-      "options": [],
-      "notes": [
-        "Internal helper; existing repair-study-display entrypoint provides the supported operation"
-      ]
-    },
-    {
-      "path": "study/readable_epub_questions.py",
-      "name": "kt-readable-epub-questions",
-      "description": "Internal OCR question choice formatting; use repair_study_display --questions-only",
-      "helper": true,
-      "sha256": "2b2511f5c96f245b2968b92076d909942bc524ff830bc664ed1de2f83cba0fa9",
-      "options": [
-        "--apply",
-        "--backup-dir",
-        "--report"
-      ],
-      "notes": [
-        "Preserves question content and original images; never infers missing choices or answers"
-      ]
-    },
-    {
-      "path": "study/test_readable_epub_questions.py",
-      "name": "kt-test-readable-epub-questions",
-      "description": "Internal OCR question choice formatting; use repair_study_display --questions-only",
-      "helper": true,
-      "sha256": "5892bd0480c7dc6153f91f3d685c8d318dfac49a3ae003247091d936223c31cd",
-      "options": [],
-      "notes": [
-        "Preserves question content and original images; never infers missing choices or answers"
-      ]
-    },
-    {
-      "path": "study/readable_epub_english.py",
-      "name": "kt-readable-epub-english",
-      "description": "Internal source-confirmed English word wrap repair",
-      "helper": true,
-      "sha256": "64318d3e5286798b27f0534bee82ff223d3fe8f897121dc39836d51ba4d1d45a",
-      "options": [
-        "--apply",
-        "--backup-dir",
-        "--base-map",
-        "--report",
-        "--source-map"
-      ],
-      "notes": [
-        "Leaves uncertain compound words unchanged"
-      ]
-    },
-    {
-      "path": "study/test_readable_epub_english.py",
-      "name": "kt-test-readable-epub-english",
-      "description": "Internal source-confirmed English word wrap repair",
-      "helper": true,
-      "sha256": "adf53d0128266eeb2997ae4024baf3af3afd15d5d143b65cc7f3f7e075673744",
-      "options": [],
-      "notes": [
-        "Leaves uncertain compound words unchanged"
-      ]
-    },
-    {
-      "path": "study/readable_epub_iroha.py",
-      "name": "kt-readable-epub-iroha",
-      "description": "Internal unambiguous Japanese イロハニ choice formatting",
-      "helper": true,
-      "sha256": "e7d508f5fe9794f6b87eb203b465717f0f38ce06348d15eda0342b160c82f1bc",
-      "options": [
-        "--apply",
-        "--backup-dir",
-        "--report"
-      ],
-      "notes": [
-        "Preserves figures and ambiguous table layouts"
-      ]
-    },
-    {
-      "path": "study/test_readable_epub_iroha.py",
-      "name": "kt-test-readable-epub-iroha",
-      "description": "Internal unambiguous Japanese イロハニ choice formatting",
-      "helper": true,
-      "sha256": "7a3b6552aa8cf99074de36578ae61c7d9c84edfd2804c60fcb930e3455a89858",
-      "options": [],
-      "notes": [
-        "Preserves figures and ambiguous table layouts"
-      ]
     }
   ]
 }
