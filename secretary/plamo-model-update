@@ -13,5 +13,20 @@ cleanup() {
 trap cleanup EXIT
 remote_work="$(incus exec "$instance" -- mktemp -d /tmp/secretary-plamo-update.XXXXXXXX)"
 incus file push "$DIR/files/plamo-model-update-container" "$instance$remote_work/update.sh"
+incus file push "$DIR/files/plamo-translate.py" "$instance$remote_work/plamo-translate.py"
 incus exec "$instance" -- chmod 700 "$remote_work/update.sh"
+incus exec "$instance" -- install -d -m 755 /run/lock /var/backups/secretary
+if ! incus exec "$instance" -- test -e /run/lock/secretary-plamo-model.lock; then
+  incus exec "$instance" -- touch /run/lock/secretary-plamo-model.lock
+  incus exec "$instance" -- chmod 644 /run/lock/secretary-plamo-model.lock
+fi
+if incus exec "$instance" -- test -f /opt/secretary/plamo-translate.py; then
+  incus exec "$instance" -- cp -an /opt/secretary/plamo-translate.py \
+    "/var/backups/secretary/plamo-translate.py.pre-${PLAMO_REVISION:0:12}"
+fi
+incus exec "$instance" -- install -m 644 "$remote_work/plamo-translate.py" /opt/secretary/plamo-translate.py
+if incus exec "$instance" -- pgrep -af '[p]lamo-translate.py'; then
+  echo 'A translation is already running; the model was not changed. Retry when it finishes.' >&2
+  exit 1
+fi
 incus exec "$instance" -- bash "$remote_work/update.sh" "$PLAMO_MODEL" "$PLAMO_REVISION"
