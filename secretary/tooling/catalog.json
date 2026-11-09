@@ -1,6 +1,6 @@
 {
   "repository": "git@github.com:0-0mfuji/Karakeep-tool.git",
-  "commit": "b9940fed08750941d61239d2540e8631576fff67",
+  "commit": "acfe6a9e453cd4e27d3b33dc144f31e3c7f27f46",
   "tools": [
     {
       "path": "books/aozora_to_epub.py",
@@ -483,7 +483,7 @@
       "name": "kt-build-gemini-reflow",
       "description": "Build draft horizontal/vertical EPUBs and a source comparison from Gemini blocks.",
       "helper": false,
-      "sha256": "cbc704acde322bde7eaaa77d61253605a06f2844922918e1e1ac65adcf2f6053",
+      "sha256": "80639cca8624696b84756a10bdaf4e67206af9b49c06ee8bdbb0f3bbf5c8224c",
       "options": [
         "--defer-reading-flow",
         "--no-preview",
@@ -790,7 +790,7 @@
       "name": "kt-convert-study-materials",
       "description": "Plan/run/resume all study-material OCR. Personal noncommercial use; no SD writes.",
       "helper": false,
-      "sha256": "de202202902526791d2205edde488198edf930e93f7fe682e8148dafaae4e9b1",
+      "sha256": "450a6de03f0fc430c6e927740c9e677531bff238cba4033f256a88c86116b48a",
       "options": [
         "--book-title",
         "--catalog",
@@ -1410,14 +1410,16 @@
       "name": "kt-repair-study-display",
       "description": "Rebuild already generated study volumes from cached OCR, without new requests.",
       "helper": false,
-      "sha256": "9a36cd3f70500504183a86f6c6e80d15b5f333608d0c923dc78eba5587cf3cfa",
+      "sha256": "997993c3a9377bdea0ea0ddaccb1fbab155941cf55df24f0cad670780644bbc8",
       "options": [
         "--backup-dir",
+        "--english-only",
         "--force",
         "--from-backup",
         "--prose-only",
         "--questions-only",
         "--root",
+        "--source-map",
         "--volume-folder"
       ],
       "notes": [
@@ -2036,6 +2038,33 @@
       "options": [],
       "notes": [
         "Preserves question content and original images; never infers missing choices or answers"
+      ]
+    },
+    {
+      "path": "study/readable_epub_english.py",
+      "name": "kt-readable-epub-english",
+      "description": "Internal source-confirmed English word wrap repair",
+      "helper": true,
+      "sha256": "9a34a7b0c281c6f58428dfcf6691e55c17b23499ec49f8ab126af4df8df56741",
+      "options": [
+        "--apply",
+        "--backup-dir",
+        "--report",
+        "--source-map"
+      ],
+      "notes": [
+        "Leaves uncertain compound words unchanged"
+      ]
+    },
+    {
+      "path": "study/test_readable_epub_english.py",
+      "name": "kt-test-readable-epub-english",
+      "description": "Internal source-confirmed English word wrap repair",
+      "helper": true,
+      "sha256": "3200e42bd93bf02e02e3293365f2bc008fd39b2f09306e1008255929049a9592",
+      "options": [],
+      "notes": [
+        "Leaves uncertain compound words unchanged"
       ]
     }
   ]
