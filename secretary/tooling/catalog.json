@@ -1,6 +1,6 @@
 {
   "repository": "git@github.com:0-0mfuji/Karakeep-tool.git",
-  "commit": "cdc39de1cc1bc1d6f407d338f5aa43d3a91200ca",
+  "commit": "268b0acc6ede3e62fda39f92894afb54838319bd",
   "tools": [
     {
       "path": "books/aozora_to_epub.py",
@@ -1410,7 +1410,7 @@
       "name": "kt-repair-study-display",
       "description": "Rebuild already generated study volumes from cached OCR, without new requests.",
       "helper": false,
-      "sha256": "d761e7ed1cf6e97e694331bd6191010f899ec89b42cc125f47992ccd50f74dd6",
+      "sha256": "e6448f7adc19c2781f980e258655232f79c041cc458f8a280420fe5b01d25237",
       "options": [
         "--backup-dir",
         "--defer-reading-flow",
