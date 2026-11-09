@@ -1,6 +1,6 @@
 {
   "repository": "git@github.com:0-0mfuji/Karakeep-tool.git",
-  "commit": "88ffaa02bc3a8ab274465a9ac4e9b279616af833",
+  "commit": "beb4b33bfe3228bf9b5ee3bf0ff383c9dbf63679",
   "tools": [
     {
       "path": "books/aozora_to_epub.py",
@@ -483,7 +483,7 @@
       "name": "kt-build-gemini-reflow",
       "description": "Build draft horizontal/vertical EPUBs and a source comparison from Gemini blocks.",
       "helper": false,
-      "sha256": "d3029827249190d08739238961b5124c213d18b118fbc211017d5891f30e1760",
+      "sha256": "54e84dc509acdcfdbb387c58bc9d1df45fdae50cea8f7afc58774f2687fd23af",
       "options": [
         "--defer-reading-flow",
         "--no-preview",
@@ -790,7 +790,7 @@
       "name": "kt-convert-study-materials",
       "description": "Plan/run/resume all study-material OCR. Personal noncommercial use; no SD writes.",
       "helper": false,
-      "sha256": "ab27e5521c98dbb94f7f9461b2bfed742cdc129602c33d17ee8221ff9a146a05",
+      "sha256": "67893af39db13f0e7a9ebea1ea5868b5f0f1d01a1603ffb4aac9c72004d63483",
       "options": [
         "--book-title",
         "--catalog",
@@ -1338,7 +1338,7 @@
       "name": "kt-readable-epub-prose",
       "description": "Internal OCR prose finalization and its regression tests; use repair_study_display --prose-only",
       "helper": true,
-      "sha256": "d69ffe3aec9cfd41e5be899f3d2fa347f0b55e9c08a6ba75595158f9c468d546",
+      "sha256": "bacd0af78acec0eb939af5bacd750405fc8932b0e341a036477513b47bb3c9bb",
       "options": [
         "--apply",
         "--backup-dir",
@@ -1434,7 +1434,12 @@
       "description": "既存EPUBの複数巻ファイル名と表示タイトルを計画に沿ってステージする",
       "helper": true,
       "sha256": "3cd978a3b2109485664f3717700f930f55c567e41728ba98624b2dc1f6f0ddc9",
-      "options": [],
+      "options": [
+        "--backup-dir",
+        "--plan",
+        "--report",
+        "--stage"
+      ],
       "notes": [
         "レビュー済み計画を入力し、ステージ結果を検査してから反映する"
       ]
@@ -1484,17 +1489,22 @@
       "name": "kt-repair-study-display",
       "description": "Rebuild already generated study volumes from cached OCR, without new requests.",
       "helper": false,
-      "sha256": "57416440944ed003e2841fdaff621271462af874b97f6be427eb053802e3fa04",
+      "sha256": "836bde53c3d4cc7d2e6f7196f591e1e7e25c9ff09a54f1b0400ebf78b7f2caf8",
       "options": [
         "--backup-dir",
+        "--defer-reading-flow",
         "--english-only",
         "--force",
         "--from-backup",
         "--iroha-only",
+        "--no-preview",
+        "--output",
+        "--pages",
         "--prose-only",
         "--questions-only",
         "--root",
         "--source-map",
+        "--title",
         "--volume-folder"
       ],
       "notes": [
@@ -1507,7 +1517,13 @@
       "description": "ページ境界を検証した既存EPUBを内容別の巻へステージする",
       "helper": true,
       "sha256": "6a8ebd38dbd50425a3c6569c4ad41a851d9911a5531d2464b3f2cefc08e9682d",
-      "options": [],
+      "options": [
+        "--audit",
+        "--key",
+        "--limit",
+        "--report",
+        "--stage"
+      ],
       "notes": [
         "レビュー済み計画を入力し、ステージ結果を検査してから反映する"
       ]
@@ -1630,6 +1646,17 @@
       ]
     },
     {
+      "path": "study/split_x3_large_epub.py",
+      "name": "kt-split-x3-large-epub",
+      "description": "Stage EPUBs with bounded linear XHTML and uncompressed images for X3.",
+      "helper": false,
+      "sha256": "9edf03e2927be3921f1f5418cf7a90daa12abd16fd9b1c25f071f26d7baa3b14",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
       "path": "study/test_cleanup_obsolete_study.py",
       "name": "kt-test-cleanup-obsolete-study",
       "description": "教材・書籍処理: test cleanup obsolete study",
@@ -1721,6 +1748,17 @@
       ]
     },
     {
+      "path": "study/test_repartition_study_epubs.py",
+      "name": "kt-test-repartition-study-epubs",
+      "description": "教材・書籍処理: test repartition study epubs",
+      "helper": true,
+      "sha256": "cf5300f369630c7f93f4f6db937ceb25460389e0222601bfd0b0e8995e539e65",
+      "options": [],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
       "path": "study/test_replace_completed_sd_epubs.py",
       "name": "kt-test-replace-completed-sd-epubs",
       "description": "教材・書籍処理: test replace completed sd epubs",
@@ -1742,6 +1780,17 @@
         "--manifest",
         "--sd"
       ],
+      "notes": [
+        "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
+      ]
+    },
+    {
+      "path": "study/test_split_x3_large_epub.py",
+      "name": "kt-test-split-x3-large-epub",
+      "description": "教材・書籍処理: test split x3 large epub",
+      "helper": true,
+      "sha256": "dbdf212a3de91653c72a347b7658b8d28ed80b3fbdfe5400674294303402ab97",
+      "options": [],
       "notes": [
         "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
       ]
