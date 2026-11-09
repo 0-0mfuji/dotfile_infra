@@ -303,6 +303,7 @@ def main():
             if args.action == 'narou':
                 narou(); return
             tools = module('secretary-tools')
+            record('gpu', 'running')
             with (tools.STATE / 'translation.lock').open('a') as gpu_lock:
                 fcntl.flock(gpu_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 if tools.active_ocr_processes(): raise RuntimeError('Another OCR worker is active')
@@ -312,6 +313,7 @@ def main():
                     articles(translate)
                     ebooks(translate)
                     record('translation', 'completed')
+                    record('gpu', 'completed')
                 finally:
                     translate.close()
         except Exception as error:
