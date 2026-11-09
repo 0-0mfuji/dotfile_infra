@@ -87,7 +87,7 @@ if [ ! -e /run/lock/secretary-plamo-model.lock ]; then
   touch /run/lock/secretary-plamo-model.lock
   chmod 644 /run/lock/secretary-plamo-model.lock
 fi
-bash "$DIR/plamo-model-update"
+bash "$DIR/files/plamo-model-update-container" "$PLAMO_MODEL" "$PLAMO_REVISION"
 for file in secretary-tools.py plamo-translate.py import-tool-data.py study-resume.py study-control.py; do
   install -m 644 "$DIR/files/$file" /opt/secretary/
 done

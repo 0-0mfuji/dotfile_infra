@@ -1,81 +1,17 @@
 #!/usr/bin/env bash
-# Update only the pinned local PLaMo snapshot; keep the current model until verified.
+# Host-side entry point: run the pulled model updater inside secretary-dev.
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo 'Run with sudo.' >&2; exit 1; }
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$DIR/versions.env"
-
-MODEL_DIR=/var/lib/secretary-models/plamo-3-translate-2b
-MODEL_REVISION=/opt/secretary/plamo.revision
-LOCK=/run/lock/secretary-plamo-model.lock
-STAGING="${MODEL_DIR}.staging.${PLAMO_REVISION:0:12}"
-
-if [ ! -e "$LOCK" ]; then
-  touch "$LOCK"
-  chmod 644 "$LOCK"
-fi
-exec 9<>"$LOCK"
-flock -n 9 || { echo 'A PLaMo translation is running; retry after it finishes.' >&2; exit 1; }
-
-current=''
-if [ -f "$MODEL_REVISION" ]; then current="$(cat "$MODEL_REVISION")"; fi
-if [ "$current" = "$PLAMO_REVISION" ] && [ -d "$MODEL_DIR" ]; then
-  echo "PLaMo is already at $PLAMO_REVISION"
-  exit 0
-fi
-[ -d /opt/secretary-plamo ] || { echo 'PLaMo Python environment is missing; run tools-install first.' >&2; exit 1; }
-[ ! -e "$STAGING" ] || { echo "Staging path already exists; preserve and inspect it first: $STAGING" >&2; exit 1; }
-python3 - "$MODEL_DIR" <<'PY'
-import shutil,sys
-free=shutil.disk_usage(sys.argv[1] if __import__('os').path.exists(sys.argv[1]) else '/var/lib/secretary-models').free
-required=7*1024**3
-if free < required:
-    raise SystemExit(f'Need at least 7 GiB free to stage and verify the new PLaMo model; found {free/1024**3:.2f} GiB')
-PY
-
+instance="${1:-secretary-dev}"
+[[ "$instance" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]*$ ]] || exit 2
+remote_work=''
 cleanup() {
-  if [ -e "$STAGING" ]; then rm -rf -- "$STAGING"; fi
+  if [ -n "$remote_work" ]; then incus exec "$instance" -- rm -rf -- "$remote_work"; fi
 }
 trap cleanup EXIT
-install -d -m 755 /var/lib/secretary-models
-HF_HOME=/var/lib/secretary-models/cache /opt/secretary-plamo/bin/python - "$PLAMO_MODEL" "$PLAMO_REVISION" "$STAGING" <<'PY'
-from pathlib import Path
-from huggingface_hub import snapshot_download
-import json,sys
-repo,revision,destination=sys.argv[1:]
-snapshot_download(repo_id=repo, revision=revision, local_dir=destination,
-                  ignore_patterns=['*.gguf','*.md','figures/*'])
-root=Path(destination)
-for name in ('config.json','model.safetensors.index.json','tokenizer.jsonl','tokenizer_config.json',
-             'modeling_plamo.py','tokenization_plamo.py'):
-    if not (root/name).is_file() or (root/name).stat().st_size == 0:
-        raise SystemExit(f'Missing model file: {name}')
-index=json.loads((root/'model.safetensors.index.json').read_text())
-for shard in sorted(set(index['weight_map'].values())):
-    if not (root/shard).is_file() or (root/shard).stat().st_size == 0:
-        raise SystemExit(f'Missing checkpoint shard: {shard}')
-PY
-HF_HOME=/var/lib/secretary-models/cache /opt/secretary-plamo/bin/python - "$STAGING" <<'PY'
-from transformers import AutoTokenizer
-import sys
-AutoTokenizer.from_pretrained(sys.argv[1], trust_remote_code=True, local_files_only=True)
-PY
-
-backup=''
-if [ -e "$MODEL_DIR" ]; then
-  old_revision="$current"
-  [ -n "$old_revision" ] || old_revision=unknown
-  backup="${MODEL_DIR}.previous.${old_revision:0:12}"
-  [ ! -e "$backup" ] || { echo "Previous-model backup already exists: $backup" >&2; exit 1; }
-  mv -- "$MODEL_DIR" "$backup"
-fi
-if ! mv -- "$STAGING" "$MODEL_DIR"; then
-  if [ -n "$backup" ] && [ -e "$backup" ] && [ ! -e "$MODEL_DIR" ]; then mv -- "$backup" "$MODEL_DIR"; fi
-  exit 1
-fi
-printf '%s\n' "$PLAMO_REVISION" > "${MODEL_REVISION}.tmp"
-chmod 644 "${MODEL_REVISION}.tmp"
-mv -- "${MODEL_REVISION}.tmp" "$MODEL_REVISION"
-trap - EXIT
-echo "Updated PLaMo to $PLAMO_REVISION"
-if [ -n "$backup" ]; then echo "Previous model retained at $backup"; fi
+remote_work="$(incus exec "$instance" -- mktemp -d /tmp/secretary-plamo-update.XXXXXXXX)"
+incus file push "$DIR/files/plamo-model-update-container" "$instance$remote_work/update.sh"
+incus exec "$instance" -- chmod 700 "$remote_work/update.sh"
+incus exec "$instance" -- bash "$remote_work/update.sh" "$PLAMO_MODEL" "$PLAMO_REVISION"
