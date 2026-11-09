@@ -1,6 +1,6 @@
 {
   "repository": "git@github.com:0-0mfuji/Karakeep-tool.git",
-  "commit": "beb4b33bfe3228bf9b5ee3bf0ff383c9dbf63679",
+  "commit": "62b0537508f5e368c5f3ce3228fad5b5bb2cae95",
   "tools": [
     {
       "path": "books/aozora_to_epub.py",
@@ -1648,9 +1648,9 @@
     {
       "path": "study/split_x3_large_epub.py",
       "name": "kt-split-x3-large-epub",
-      "description": "Stage EPUBs with bounded linear XHTML and uncompressed images for X3.",
+      "description": "Stage EPUBs with bounded spine XHTML and uncompressed images for X3.",
       "helper": false,
-      "sha256": "9edf03e2927be3921f1f5418cf7a90daa12abd16fd9b1c25f071f26d7baa3b14",
+      "sha256": "e97334f05a9f2245c6032ad7bddd7e0c864b0b4ead19c506a4784c2b484ff476",
       "options": [],
       "notes": [
         "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
@@ -1789,7 +1789,7 @@
       "name": "kt-test-split-x3-large-epub",
       "description": "教材・書籍処理: test split x3 large epub",
       "helper": true,
-      "sha256": "dbdf212a3de91653c72a347b7658b8d28ed80b3fbdfe5400674294303402ab97",
+      "sha256": "6705fc811834404dd29f73556153a611c0a9d9efc0ce70b49f97f7aae65cc7e6",
       "options": [],
       "notes": [
         "必要な教材原本・モデル・端末・NAS・追加ソースをinspectで確認する。データや依存ソースはGit cloneだけでは揃わない"
