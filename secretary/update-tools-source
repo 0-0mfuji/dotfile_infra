@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Update the pinned tool source without reinstalling models or stopping unrelated jobs.
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$DIR/versions.env"
+instance="${1:-secretary-dev}"
+[[ "$instance" =~ ^[a-zA-Z0-9][a-zA-Z0-9-]*$ ]] || exit 2
+work="$(mktemp -d)"
+staging=''
+cleanup() {
+  if [ -n "$staging" ]; then incus exec "$instance" -- rm -rf "$staging"; fi
+  rm -rf "$work"
+}
+trap cleanup EXIT
+git init -q "$work/source"
+git -C "$work/source" fetch git@github.com:0-0mfuji/Karakeep-tool.git "$KARAKEEP_TOOL_COMMIT"
+git -C "$work/source" branch secretary-release FETCH_HEAD
+git -C "$work/source" bundle create "$work/source.bundle" refs/heads/secretary-release
+staging="$(incus exec "$instance" -- mktemp -d /tmp/secretary-source.XXXXXXXX)"
+incus file push "$work/source.bundle" "$instance$staging/source.bundle"
+incus exec "$instance" -- python3 - "$staging/source.bundle" "$KARAKEEP_TOOL_COMMIT" < "$DIR/tooling/update-tools-source.py"
+incus file push "$DIR/tooling/catalog.json" "$instance/opt/secretary/catalog.json"
+incus exec "$instance" -- chmod 644 /opt/secretary/catalog.json
+incus exec "$instance" -- runuser -u secretary -- /opt/secretary-tools/bin/python /opt/secretary/secretary-tools.py doctor

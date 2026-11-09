@@ -18,3 +18,7 @@ Macでは `dev secretary` でNanoMuseを開き、`dev secretary setup` で連携
 再実行時にユーザーの文書・NanoMuseの認証設定を上書きしません。
 
 詳細は [秘書の手順](https://github.com/0-0mfuji/dotfiles_server/blob/main/docs/secretary.md)を参照してください。
+
+### 教材生成コードだけの更新
+
+モデルや依存パッケージを変更しない `study/` の追加更新には、MacでKarakeep-toolの変更を公開し、このrepoの `versions.env` と `tooling/catalog.json` を更新・公開した後、サーバーで `git pull --ff-only`、`./secretary/update-tools-source` を実行できます。作業ツリーの変更・変換処理の実行中・巻き戻し・study外の変更がある場合は停止して保全します。無関係な取得処理やAIサービスは停止しません。その他の更新は通常のprovisionを使います。

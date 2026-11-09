@@ -1,6 +1,6 @@
 {
   "repository": "git@github.com:0-0mfuji/Karakeep-tool.git",
-  "commit": "e4f7e40a2df76e6d41557ba0c06c9c7f80b8a4ec",
+  "commit": "cdc39de1cc1bc1d6f407d338f5aa43d3a91200ca",
   "tools": [
     {
       "path": "books/aozora_to_epub.py",
@@ -483,8 +483,9 @@
       "name": "kt-build-gemini-reflow",
       "description": "Build draft horizontal/vertical EPUBs and a source comparison from Gemini blocks.",
       "helper": false,
-      "sha256": "7df9fb28412ffcac16df57203cb7207c5fa1d9a4c6f84483d600337cfdcd86e1",
+      "sha256": "1107c325baa6ba093aa6e16b03a733c8cc3aa2a6322b9645b64ee6dd85cd11c3",
       "options": [
+        "--defer-reading-flow",
         "--no-preview",
         "--output",
         "--pages",
@@ -789,11 +790,12 @@
       "name": "kt-convert-study-materials",
       "description": "Plan/run/resume all study-material OCR. Personal noncommercial use; no SD writes.",
       "helper": false,
-      "sha256": "22468fa7d79f8e3027102a6f00f414336439f225d8635921866589348f1eca99",
+      "sha256": "87cec65de875d60dfa023ba4199a237cb0984ec6fc5fd53bdb85b0ffdf3c4927",
       "options": [
         "--book-title",
         "--catalog",
         "--confidence",
+        "--defer-reading-flow",
         "--device",
         "--dpi",
         "--engine",
@@ -1408,12 +1410,15 @@
       "name": "kt-repair-study-display",
       "description": "Rebuild already generated study volumes from cached OCR, without new requests.",
       "helper": false,
-      "sha256": "14ab449fb730123237a47b54b26a4a591820441c5aee7dcb76b316d31dd05319",
+      "sha256": "d761e7ed1cf6e97e694331bd6191010f899ec89b42cc125f47992ccd50f74dd6",
       "options": [
+        "--backup-dir",
+        "--defer-reading-flow",
         "--force",
         "--no-preview",
         "--output",
         "--pages",
+        "--prose-only",
         "--root",
         "--title",
         "--volume-folder"
@@ -1982,6 +1987,32 @@
       "sha256": "0c0309de957acdfc84ebc40fdcfa336154b30cb426851a406276ac1df60af064",
       "options": [],
       "notes": []
+    },
+    {
+      "path": "study/readable_epub_prose.py",
+      "name": "kt-readable-epub-prose",
+      "description": "Internal OCR prose finalization and its regression tests; use repair_study_display --prose-only",
+      "helper": true,
+      "sha256": "44ade38e0175efe4bf62c28a3cde04d11736890c69d7c8753d28940a395b9d01",
+      "options": [
+        "--apply",
+        "--backup-dir",
+        "--report"
+      ],
+      "notes": [
+        "Internal helper; existing repair-study-display entrypoint provides the supported operation"
+      ]
+    },
+    {
+      "path": "study/test_readable_epub_prose.py",
+      "name": "kt-test-readable-epub-prose",
+      "description": "Internal OCR prose finalization and its regression tests; use repair_study_display --prose-only",
+      "helper": true,
+      "sha256": "0a1342e9a27ff762f3a7d74095d2c6c6de4c112f657cb1903e0f3882c2f4ab0f",
+      "options": [],
+      "notes": [
+        "Internal helper; existing repair-study-display entrypoint provides the supported operation"
+      ]
     }
   ]
 }
