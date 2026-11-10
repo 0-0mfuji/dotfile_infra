@@ -15,8 +15,13 @@ def main():
                 raise ValueError('batch must contain 1 to 256 texts')
             if any(not isinstance(text, str) or not text.strip() or len(text) > 12000 for text in texts):
                 raise ValueError('invalid text')
-            result = (translator.translate_batch.remote(request['texts'])
-                      if 'texts' in request else translator.translate.remote(request['text']))
+            call = (translator.translate_batch.spawn(request['texts'])
+                    if 'texts' in request else translator.translate.spawn(request['text']))
+            try:
+                result = call.get(timeout=300)
+            except TimeoutError:
+                call.cancel()
+                raise
             print(json.dumps(result, ensure_ascii=False), flush=True)
         except Exception as exc:
             print(json.dumps({'error': type(exc).__name__}), flush=True)
