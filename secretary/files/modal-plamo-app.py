@@ -15,7 +15,8 @@ def download_model():
 
 image = (modal.Image.debian_slim(python_version='3.11')
          .pip_install('torch==2.8.0', 'transformers==4.57.1', 'accelerate==1.12.0',
-                      'huggingface_hub==0.36.0', 'sentencepiece')
+                      'huggingface_hub==0.36.0', 'sentencepiece', 'numpy==2.3.5',
+                      'numba==0.62.1')
          .run_function(download_model, timeout=1800))
 app = modal.App('secretary-plamo-translation')
 
