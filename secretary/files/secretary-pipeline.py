@@ -137,6 +137,10 @@ def sentences(text):
     return [p.replace('\u2024', '.') for p in re.split(r'(?<=[.!?])\s+(?=[A-Z0-9“"(])', protected) if p]
 
 
+class TranslationNeedsReview(RuntimeError):
+    """The model produced content that must not be published automatically."""
+
+
 class Translator:
     def __init__(self):
         self.process = None
@@ -166,7 +170,7 @@ class Translator:
             raise RuntimeError('PLaMo did not produce a complete translation')
         translated = result['text'].strip()
         if re.search('[A-Za-z]', text) and not re.search('[\u3040-\u30ff\u3400-\u9fff]', translated):
-            raise RuntimeError('Translation contains no Japanese text; manual review needed')
+            raise TranslationNeedsReview('Translation contains no Japanese text; manual review needed')
         save(cache, dict(source=text, translation=translated, revision=revision))
         return translated
 
@@ -212,13 +216,33 @@ def articles(translate):
             seen.add(cursor)
         save(manifest, items)
     items = load(manifest)
+    revision = (INSTALL / 'plamo.revision').read_text().strip()
+    review_count = 0
     for index, item in enumerate(items):
-        outbox = STATE / 'outbox' / (item['id'] + '-' + item['hash'] + '.json')
+        name = item['id'] + '-' + item['hash'] + '.json'
+        outbox = STATE / 'outbox' / name
+        review = STATE / 'review' / 'articles' / name
         if outbox.exists(): continue
-        record('translation', 'running', source='karakeep', index=index + 1, total=len(items), source_id=item['id'])
-        pairs = [[s, translate(s)] for s in sentences(item['text'])]
-        save(outbox, dict(source_id=item['id'], source_hash=item['hash'], pairs=pairs,
-                         model=(INSTALL / 'plamo.revision').read_text().strip(), translated_at=time.time()))
+        prior = load(review, {})
+        if prior.get('model') == revision and prior.get('source_hash') == item['hash']:
+            review_count += 1
+            continue
+        record('translation', 'running', source='karakeep', index=index + 1, total=len(items), source_id=item['id'], review_count=review_count)
+        pairs = []
+        for sentence_index, sentence in enumerate(sentences(item['text']), 1):
+            try:
+                pairs.append([sentence, translate(sentence)])
+            except TranslationNeedsReview:
+                # Never publish a partial article or repeatedly retry a deterministic bad result.
+                save(review, dict(source_id=item['id'], source_hash=item['hash'], model=revision,
+                                  sentence_index=sentence_index, reason='no_japanese_translation', updated_at=time.time()))
+                review_count += 1
+                break
+        else:
+            save(outbox, dict(source_id=item['id'], source_hash=item['hash'], pairs=pairs,
+                             model=revision, translated_at=time.time()))
+            review.unlink(missing_ok=True)
+    return review_count
 
 
 def ebooks(translate):
@@ -310,10 +334,10 @@ def main():
                 medical()
                 translate = Translator()
                 try:
-                    articles(translate)
+                    review_count = articles(translate)
                     ebooks(translate)
-                    record('translation', 'completed')
-                    record('gpu', 'completed')
+                    record('translation', 'review_required' if review_count else 'completed', review_count=review_count)
+                    record('gpu', 'completed_with_review' if review_count else 'completed', review_count=review_count)
                 finally:
                     translate.close()
         except Exception as error:

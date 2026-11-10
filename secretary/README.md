@@ -39,6 +39,12 @@ They resume on container boot; completed input hashes/output files are reused.
 GPU workers share the existing `translation.lock`. PLaMo retains its model in
 one process and checkpoints each sentence. Its source/model hash prevents
 using translations from a different input or model revision.
+If a sentence produces no Japanese, the article is recorded under
+`/var/lib/secretary-pipeline/review/articles/` with its source hash, model and
+sentence index. No partial article is sent to the outbox. The worker continues
+with other articles and reports `review_required` after completing the remaining
+work. Remove a review record only after diagnosing the issue to allow a retry;
+other worker errors retain the normal retry behavior.
 
 `/var/lib/secretary-pipeline` holds status, logs, sentence caches, the fixed
 article snapshot, bilingual EPUBs and completed article outbox. Source PDFs,

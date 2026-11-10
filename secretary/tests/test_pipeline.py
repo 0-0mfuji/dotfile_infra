@@ -36,6 +36,36 @@ class PipelineTests(unittest.TestCase):
         text = 'Dr. Smith uses Fig. 2 at 3.14 Hz. Next observation.'
         self.assertEqual(p.sentences(text), ['Dr. Smith uses Fig. 2 at 3.14 Hz.', 'Next observation.'])
 
+    def test_untranslatable_article_is_queued_for_review_without_blocking_other_articles(self):
+        p = imported('secretary-pipeline')
+        with tempfile.TemporaryDirectory() as folder:
+            state = Path(folder) / 'state'; install = Path(folder) / 'install'
+            install.mkdir(); (install / 'plamo.revision').write_text('model-v1')
+            p.save(state / 'articles.json', [dict(id='bad', hash='h1', text='Untranslatable text.'),
+                                              dict(id='good', hash='h2', text='English sentence.')])
+            calls = []
+            def translate(text):
+                calls.append(text)
+                if text.startswith('Untranslatable'): raise p.TranslationNeedsReview('not Japanese')
+                return '日本語の文です。'
+            with patch.object(p, 'STATE', state), patch.object(p, 'INSTALL', install), patch.object(p, 'module', return_value=None):
+                self.assertEqual(p.articles(translate), 1)
+                self.assertFalse((state / 'outbox/bad-h1.json').exists())
+                self.assertEqual(p.load(state / 'review/articles/bad-h1.json')['sentence_index'], 1)
+                self.assertEqual(p.load(state / 'outbox/good-h2.json')['pairs'], [['English sentence.', '日本語の文です。']])
+                calls.clear(); self.assertEqual(p.articles(translate), 1); self.assertEqual(calls, [])
+
+    def test_operational_translation_failure_still_propagates(self):
+        p = imported('secretary-pipeline')
+        with tempfile.TemporaryDirectory() as folder:
+            state = Path(folder) / 'state'; install = Path(folder) / 'install'
+            install.mkdir(); (install / 'plamo.revision').write_text('model-v1')
+            p.save(state / 'articles.json', [dict(id='a', hash='h', text='English sentence.')])
+            def failed(_): raise RuntimeError('GPU unavailable')
+            with patch.object(p, 'STATE', state), patch.object(p, 'INSTALL', install), patch.object(p, 'module', return_value=None):
+                with self.assertRaisesRegex(RuntimeError, 'GPU unavailable'): p.articles(failed)
+                self.assertFalse((state / 'review/articles/a-h.json').exists())
+
     def test_publish_inherits_time_tags_lists_and_does_not_mutate_source(self):
         p = imported('secretary-pipeline-upload')
         text = 'This is the original article.'
