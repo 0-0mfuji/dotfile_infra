@@ -258,17 +258,17 @@ def articles(translate, worker='local'):
     return review_count
 
 
-def ebooks(translate):
+def ebooks(translate, title='カンデル'):
     root = REPO / 'data/study/device-library-all'
-    sources = [p for p in root.rglob('*.epub') if 'カンデル' in normalize(p.name)]
+    sources = [p for p in root.rglob('*.epub') if title in normalize(p.name) and '英語' in normalize(p.name)]
     if not sources:
-        raise RuntimeError('Final Kandel English EPUBs not found')
+        raise RuntimeError('English EPUBs not found: ' + title)
     for source in sorted(sources):
         key = digest(source)
         target = STATE / 'epubs' / (normalize(source.stem) + '【英日対訳】.epub')
         receipt = target.with_suffix('.json')
         if target.exists() and load(receipt, {}).get('source_hash') == key: continue
-        record('translation', 'running', source='kandel', title=source.stem)
+        record('translation-book-' + title, 'running', title=source.stem)
         translated_count = 0
         temporary = target.with_name(target.stem + '.partial.epub')
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -343,6 +343,7 @@ def main():
             if args.action == 'modal':
                 translate = Translator(use_modal=True)
                 try:
+                    ebooks(translate, title='ハリソン')
                     count = articles(translate, worker='modal')
                     record('translation-modal', 'review_required' if count else 'completed', review_count=count)
                 finally:
@@ -356,8 +357,8 @@ def main():
                 medical()
                 translate = Translator()
                 try:
+                    ebooks(translate, title='カンデル')
                     review_count = articles(translate)
-                    ebooks(translate)
                     record('translation', 'review_required' if review_count else 'completed', review_count=review_count)
                     record('gpu', 'completed_with_review' if review_count else 'completed', review_count=review_count)
                 finally:
