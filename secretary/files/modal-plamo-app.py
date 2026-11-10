@@ -20,7 +20,7 @@ image = (modal.Image.debian_slim(python_version='3.11')
 app = modal.App('secretary-plamo-translation')
 
 
-@app.cls(image=image, gpu='L4', max_containers=1, scaledown_window=10, timeout=900)
+@app.cls(image=image, gpu=['L4', 'A10'], max_containers=1, scaledown_window=10, timeout=900)
 class Translator:
     @modal.enter()
     def load(self):
@@ -61,4 +61,5 @@ class Translator:
         result = self.tokenizer.decode(tokens, skip_special_tokens=True).strip()
         if not result:
             raise RuntimeError('empty translation')
-        return {'text': result, 'model': MODEL, 'revision': REVISION}
+        return {'text': result, 'model': MODEL, 'revision': REVISION,
+                'gpu': torch.cuda.get_device_name(0)}
