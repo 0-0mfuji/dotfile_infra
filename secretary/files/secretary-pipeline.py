@@ -142,8 +142,9 @@ class TranslationNeedsReview(RuntimeError):
 
 
 class Translator:
-    def __init__(self):
+    def __init__(self, use_modal=False):
         self.process = None
+        self.use_modal = use_modal
 
     def close(self):
         if self.process:
@@ -153,12 +154,21 @@ class Translator:
 
     def __call__(self, text):
         revision = (INSTALL / 'plamo.revision').read_text().strip()
-        key = hashlib.sha256((revision + ':sentence-v1:' + text).encode()).hexdigest()
+        backend = 'modal-a10' if self.use_modal else 'local-cuda'
+        key = hashlib.sha256((revision + ':' + backend + ':sentence-v1:' + text).encode()).hexdigest()
         cache = STATE / 'sentences' / (key + '.json')
         if cache.exists():
             return load(cache)['translation']
+        if self.use_modal:
+            executable = '/opt/secretary-modal/bin/python'
+            worker = str(INSTALL / 'modal-plamo-client.py')
+        else:
+            executable = '/opt/secretary-plamo/bin/python'
+            worker = str(INSTALL / 'plamo-translate.py')
         if not self.process:
-            self.process = subprocess.Popen(['/opt/secretary-plamo/bin/python', str(INSTALL / 'plamo-translate.py'), '--stream'],
+            command = [executable, worker]
+            if not self.use_modal: command.append('--stream')
+            self.process = subprocess.Popen(command,
                                             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1)
         self.process.stdin.write(json.dumps(dict(text=text, source_lang='en', target_lang='ja')) + '\n')
         self.process.stdin.flush()
@@ -195,7 +205,7 @@ def article_text(item):
     return '\n'.join(line.strip() for line in ''.join(parser.parts).splitlines() if line.strip())
 
 
-def articles(translate):
+def articles(translate, worker='local'):
     tools = module('secretary-tools')
     manifest = STATE / 'articles.json'
     if not manifest.exists():
@@ -219,6 +229,9 @@ def articles(translate):
     revision = (INSTALL / 'plamo.revision').read_text().strip()
     review_count = 0
     for index, item in enumerate(items):
+        # Stable, disjoint assignment lets the local GPU and Modal work at once.
+        use_modal = int(hashlib.sha256(item['id'].encode()).hexdigest()[-1], 16) % 2 == 0
+        if (worker == 'modal') != use_modal: continue
         name = item['id'] + '-' + item['hash'] + '.json'
         outbox = STATE / 'outbox' / name
         review = STATE / 'review' / 'articles' / name
@@ -227,7 +240,7 @@ def articles(translate):
         if prior.get('model') == revision and prior.get('source_hash') == item['hash']:
             review_count += 1
             continue
-        record('translation', 'running', source='karakeep', index=index + 1, total=len(items), source_id=item['id'], review_count=review_count)
+        record('translation-' + worker, 'running', source='karakeep', index=index + 1, total=len(items), review_count=review_count)
         pairs = []
         for sentence_index, sentence in enumerate(sentences(item['text']), 1):
             try:
@@ -313,19 +326,28 @@ def ebooks(translate):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('action', choices=['gpu', 'narou', 'status'])
+    parser.add_argument('action', choices=['gpu', 'modal', 'narou', 'status'])
     args = parser.parse_args()
     if args.action == 'status':
         for p in sorted(STATE.glob('*-status.json')): print(p.name, p.read_text())
         return
     STATE.mkdir(parents=True, exist_ok=True)
-    with (STATE / (args.action + '.lock')).open('a') as own_lock:
+    lock_name = 'modal' if args.action == 'modal' else args.action
+    with (STATE / (lock_name + '.lock')).open('a') as own_lock:
         fcntl.flock(own_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         try:
             if shutil.disk_usage(REPO / 'data').free < 6 * 1024**3:
                 raise RuntimeError('Less than 6 GiB free; waiting for space')
             if args.action == 'narou':
                 narou(); return
+            if args.action == 'modal':
+                translate = Translator(use_modal=True)
+                try:
+                    count = articles(translate, worker='modal')
+                    record('translation-modal', 'review_required' if count else 'completed', review_count=count)
+                finally:
+                    translate.close()
+                return
             tools = module('secretary-tools')
             record('gpu', 'running')
             with (tools.STATE / 'translation.lock').open('a') as gpu_lock:

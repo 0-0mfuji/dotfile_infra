@@ -17,15 +17,15 @@ if ! /opt/secretary-modal/bin/python -c 'import modal; assert modal.__version__ 
   python3 -m venv /opt/secretary-modal
   /opt/secretary-modal/bin/pip install 'modal==1.2.6'
 fi
-for unit in secretary-pipeline-gpu.service secretary-pipeline-narou.service secretary-pipeline-upload.service secretary-pipeline-upload.timer; do
+for unit in secretary-pipeline-gpu.service secretary-pipeline-modal.service secretary-pipeline-narou.service secretary-pipeline-upload.service secretary-pipeline-upload.timer; do
   install -m 644 "$DIR/files/$unit" /etc/systemd/system/
 done
 install -d -m 755 /etc/tmpfiles.d
 install -m 644 "$DIR/files/secretary-pipeline.conf" /etc/tmpfiles.d/
 systemd-tmpfiles --create /etc/tmpfiles.d/secretary-pipeline.conf
 systemctl daemon-reload
-systemctl enable secretary-pipeline-gpu.service secretary-pipeline-narou.service secretary-pipeline-upload.timer
-for unit in secretary-pipeline-gpu.service secretary-pipeline-narou.service secretary-pipeline-upload.timer; do
+systemctl enable secretary-pipeline-gpu.service secretary-pipeline-modal.service secretary-pipeline-narou.service secretary-pipeline-upload.timer
+for unit in secretary-pipeline-gpu.service secretary-pipeline-modal.service secretary-pipeline-narou.service secretary-pipeline-upload.timer; do
   if [ "$(systemctl show -p SubState --value "$unit")" = auto-restart ]; then
     systemctl restart "$unit"
   else
