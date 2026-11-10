@@ -10,9 +10,13 @@ for folder in outbox sentences epubs; do
   install -d -m 2750 -o secretary -g secretary-pipeline "/var/lib/secretary-pipeline/$folder"
 done
 install -d -m 700 -o secretary-karakeep -g secretary-karakeep /var/lib/secretary-karakeep/translations
-for file in secretary-pipeline.py secretary-pipeline-upload.py plamo-translate.py secretary-tools.py; do
+for file in secretary-pipeline.py secretary-pipeline-upload.py plamo-translate.py modal-plamo-app.py modal-plamo-client.py secretary-tools.py; do
   install -m 644 "$DIR/files/$file" "/opt/secretary/$file"
 done
+if ! /opt/secretary-modal/bin/python -c 'import modal; assert modal.__version__ == "1.2.6"' 2>/dev/null; then
+  python3 -m venv /opt/secretary-modal
+  /opt/secretary-modal/bin/pip install 'modal==1.2.6'
+fi
 for unit in secretary-pipeline-gpu.service secretary-pipeline-narou.service secretary-pipeline-upload.service secretary-pipeline-upload.timer; do
   install -m 644 "$DIR/files/$unit" /etc/systemd/system/
 done

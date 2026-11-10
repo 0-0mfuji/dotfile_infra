@@ -65,6 +65,15 @@ An ambiguous outcome requires operator reconciliation. Originals are not updated
 or deleted. Automated translation is a draft, not human or medical review.
 
 Status: `incus exec secretary-dev -- runuser -u secretary -- /opt/secretary-tools/bin/python /opt/secretary/secretary-pipeline.py status`.
+
+Modal provides an optional authenticated RPC, with no public URL. Deploy
+`files/modal-plamo-app.py` using the Modal CLI after setting the workspace spend
+limit. The isolated client `/opt/secretary-modal/bin/python
+/opt/secretary/modal-plamo-client.py` reads JSON lines containing `text` or
+`texts` (up to 256) and writes JSON lines. Document extraction, caching and
+publishing remain local. The normal automatic pipeline continues to use local
+GPU; calling the Modal RPC explicitly is separately billable. Keep the Modal
+token in the secretary user's private configuration and never commit it.
 NanoMuse/DSH may use `secretary_tools`'s `pipeline_status` without a shell.
 Stop/resume with `systemctl stop/start secretary-pipeline-gpu.service
 secretary-pipeline-narou.service secretary-pipeline-upload.timer` inside the
