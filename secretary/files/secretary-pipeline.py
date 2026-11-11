@@ -357,6 +357,7 @@ def main():
             if args.action == 'narou':
                 narou(); return
             if args.action == 'modal':
+                record('modal', 'running')
                 translate = Translator(use_modal=True)
                 try:
                     ebooks(translate, title='ハリソン')
