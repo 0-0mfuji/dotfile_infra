@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import zipfile
 from unittest.mock import patch
 
 FILES = Path(__file__).resolve().parents[1] / 'files'
@@ -15,6 +16,32 @@ def imported(name):
 
 
 class PipelineTests(unittest.TestCase):
+    def test_book_translation_records_and_reuses_failed_sentence(self):
+        p = imported('secretary-pipeline')
+        with tempfile.TemporaryDirectory() as folder:
+            base = Path(folder); repo = base / 'repo'; state = base / 'state'; install = base / 'install'
+            install.mkdir(); (install / 'plamo.revision').write_text('v1')
+            root = repo / 'data/study/device-library-all'; root.mkdir(parents=True)
+            source = root / 'カンデル（英語）.epub'
+            with zipfile.ZipFile(source, 'w') as z:
+                z.writestr('mimetype', 'application/epub+zip')
+                z.writestr('book.xhtml', '<html><body><p>This is a reference with five words.</p></body></html>')
+            class FakeTranslator:
+                use_modal = False
+                def __init__(self): self.calls = 0
+                def __call__(self, text):
+                    self.calls += 1
+                    raise p.TranslationNeedsReview('no Japanese')
+            translate = FakeTranslator()
+            with patch.object(p, 'REPO', repo), patch.object(p, 'STATE', state), patch.object(p, 'INSTALL', install), patch.object(p.subprocess, 'run'):
+                p.ebooks(translate)
+                receipt = next((state / 'epubs').glob('*.json'))
+                self.assertEqual(p.load(receipt)['review_count'], 1)
+                with zipfile.ZipFile(next((state / 'epubs').glob('*.epub'))) as z:
+                    self.assertIn('翻訳要確認', z.read('book.xhtml').decode())
+                p.ebooks(translate)
+                self.assertEqual(translate.calls, 1)
+
     def test_completed_receipt_needs_same_bytes_and_real_outputs(self):
         p = imported('secretary-pipeline')
         with tempfile.TemporaryDirectory() as folder:
@@ -50,10 +77,12 @@ class PipelineTests(unittest.TestCase):
                 return '日本語の文です。'
             with patch.object(p, 'STATE', state), patch.object(p, 'INSTALL', install), patch.object(p, 'module', return_value=None):
                 self.assertEqual(p.articles(translate), 1)
+                self.assertEqual(p.articles(translate, worker='modal'), 0)
                 self.assertFalse((state / 'outbox/bad-h1.json').exists())
                 self.assertEqual(p.load(state / 'review/articles/bad-h1.json')['sentence_index'], 1)
                 self.assertEqual(p.load(state / 'outbox/good-h2.json')['pairs'], [['English sentence.', '日本語の文です。']])
-                calls.clear(); self.assertEqual(p.articles(translate), 1); self.assertEqual(calls, [])
+                calls.clear(); self.assertEqual(p.articles(translate), 1)
+                self.assertEqual(p.articles(translate, worker='modal'), 0); self.assertEqual(calls, [])
 
     def test_operational_translation_failure_still_propagates(self):
         p = imported('secretary-pipeline')

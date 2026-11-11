@@ -270,6 +270,7 @@ def ebooks(translate, title='カンデル'):
         if target.exists() and load(receipt, {}).get('source_hash') == key: continue
         record('translation-book-' + title, 'running', title=source.stem)
         translated_count = 0
+        review_count = 0
         temporary = target.with_name(target.stem + '.partial.epub')
         target.parent.mkdir(parents=True, exist_ok=True)
         with zipfile.ZipFile(source) as src, zipfile.ZipFile(temporary, 'w') as dst:
@@ -291,7 +292,21 @@ def ebooks(translate, title='カンデル'):
                             tail = child.tail
                             parent.remove(child)
                             for sentence_index, s in enumerate(parts):
-                                for lang, body in [('en', s), ('ja', translate(s))]:
+                                revision = (INSTALL / 'plamo.revision').read_text().strip()
+                                backend = 'modal' if translate.use_modal else 'local'
+                                review_key = hashlib.sha256((revision + ':' + backend + ':' + s).encode()).hexdigest()
+                                review_file = STATE / 'review' / 'book-sentences' / (review_key + '.json')
+                                try:
+                                    if review_file.exists():
+                                        raise TranslationNeedsReview('previously recorded')
+                                    translation = translate(s)
+                                except TranslationNeedsReview:
+                                    if not review_file.exists():
+                                        save(review_file, dict(source=s, title=source.stem, model=revision,
+                                                               backend=backend, reason='no_japanese_translation'))
+                                    translation = '［翻訳要確認］'
+                                    review_count += 1
+                                for lang, body in [('en', s), ('ja', translation)]:
                                     attributes = {}
                                     if lang == 'en' and sentence_index == 0: attributes.update(child.attrib)
                                     attributes.update(lang=lang, **{'class': 'bilingual-' + lang})
@@ -321,7 +336,8 @@ def ebooks(translate, title='カンデル'):
         with (STATE / 'epubcheck.log').open('a') as log:
             subprocess.run(['/usr/bin/java', '-jar', str(jar), str(temporary)], stdout=log, stderr=log, check=True)
         os.replace(temporary, target)
-        save(receipt, dict(source=str(source), source_hash=key, sentences=translated_count, status='draft_unreviewed'))
+        save(receipt, dict(source=str(source), source_hash=key, sentences=translated_count,
+                           review_count=review_count, status='draft_unreviewed'))
 
 
 def main():
