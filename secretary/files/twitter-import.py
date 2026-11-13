@@ -86,6 +86,9 @@ def snapshot_index(bookmarks):
         content = b.get('content') or {}
         if content.get('type') == 'asset' and content.get('fileName'):
             files.add(content['fileName'])
+        for asset in b.get('assets') or []:
+            if asset.get('fileName'):
+                files.add(asset['fileName'])
     return ids, urls, files, markers
 
 

@@ -4,18 +4,18 @@ import sys
 import tempfile
 import types
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 common = types.ModuleType('common')
 common.extract_karakeep_tweet_ids = lambda bs: {m.group(1) for b in bs if (m := re.search(r'/status/(\d+)', (b.get('content') or {}).get('url', '')))}
 common.extract_karakeep_urls = lambda bs: {b['content']['url'] for b in bs if (b.get('content') or {}).get('url')}
 common.extract_uploaded_filenames_from_export = lambda bs: {b['note'].split()[0][9:] for b in bs if (b.get('note') or '').startswith('filename:')}
-sys.modules['common'] = common
-sys.modules['register_tweets'] = types.ModuleType('register_tweets')
-sys.modules['upload_media'] = types.ModuleType('upload_media')
 spec = importlib.util.spec_from_file_location('twitter_import', Path(__file__).parents[1] / 'files/twitter-import.py')
 m = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(m)
+with patch.dict(sys.modules, {'common': common, 'register_tweets': types.ModuleType('register_tweets'),
+                              'upload_media': types.ModuleType('upload_media')}):
+    spec.loader.exec_module(m)
 
 class TwitterImportTests(unittest.TestCase):
     def setUp(self):
@@ -38,10 +38,11 @@ class TwitterImportTests(unittest.TestCase):
         self.assertEqual(self.ledger.get('media:' + entry['filename'])[0], 'done')
     def test_snapshot_indexes_notes_and_media(self):
         data = [{'id':'a','note':'filename:foo.jpg tweet_id:123', 'content':{'type':'asset','fileName':'foo.jpg'}},
-                {'id':'b','content':{'type':'link','url':'https://x.com/a/status/123'}}]
+                {'id':'b','content':{'type':'link','url':'https://x.com/a/status/123'}, 'assets':[{'fileName':'video.mp4'}]}]
         ids, urls, files, markers = m.snapshot_index(data)
         self.assertEqual(ids, {'123'}); self.assertIn('foo.jpg', files)
         self.assertEqual(markers['foo.jpg'], ['a'])
+        self.assertIn('video.mp4', files)
     def test_existing_duplicate_markers_are_skipped(self):
         entry = {'filename': 'same.jpg', 'ext': 'jpg'}
         self.assertFalse(m.create_media(None, self.ledger, entry, set(), {'same.jpg': ['a', 'b']}, set(), Path(self.temp.name)))
