@@ -70,6 +70,7 @@ if [ ! -f /home/dev/.local/onlook/db-initialized ]; then
   export SUPABASE_URL=http://localhost:54321
   export SUPABASE_DATABASE_URL="$(node -p 'JSON.parse(require("fs").readFileSync(process.argv[1])).DB_URL' "$status")"
   export SUPABASE_SERVICE_ROLE_KEY="$(node -p 'JSON.parse(require("fs").readFileSync(process.argv[1])).SERVICE_ROLE_KEY' "$status")"
+  bun run db:push
   bun run db:seed
   touch /home/dev/.local/onlook/db-initialized
 fi
