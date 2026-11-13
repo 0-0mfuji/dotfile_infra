@@ -90,6 +90,9 @@ def snapshot_index(bookmarks):
 
 
 def create_link(client, ledger, item, ids, urls):
+    parsed = urllib.parse.urlsplit(item['url'])
+    if parsed.scheme != 'https' or parsed.hostname not in ('twitter.com', 'x.com', 't.co'):
+        raise ValueError('Invalid bookmark source')
     match = re.search(r'/status/(\d+)', item['url'])
     ident = match.group(1) if match else None
     if item['url'] in urls or (ident and ident in ids): return False
@@ -173,14 +176,28 @@ def main():
         print('Snapshot:', len(bookmarks), 'bookmarks;', len(ids), 'tweet IDs;', len(files), 'media filenames', flush=True)
         items = register_tweets.collect_items_to_register(tweets, ids, urls, False, False)
         print('Input:', len(tweets), 'tweets;', len(media), 'media; candidate links:', len(items), flush=True)
+        pending_media = [entry for entry in media if entry['filename'] not in files | old_done]
+        print('Media pending:', len(pending_media), 'including videos:',
+              sum(entry['ext'] == 'mp4' for entry in pending_media),
+              '; existing or prior completed:', len(media) - len(pending_media), flush=True)
         if '--dry-run' in sys.argv: return
+        canary = '--canary' in sys.argv
+        tested = set()
+        if canary:
+            items = []
         for i, item in enumerate(items, 1):
             create_link(client, ledger, item, ids, urls)
             if i % 100 == 0: print('Links processed:', i, '/', len(items), flush=True)
             time.sleep(.2)
         with tempfile.TemporaryDirectory(prefix='twitter-', dir=ROOT) as temp:
             for i, entry in enumerate(media, 1):
-                create_media(client, ledger, entry, files, markers, old_done, Path(temp))
+                kind = 'video' if entry['ext'] == 'mp4' else 'image'
+                if canary and kind in tested: continue
+                created = create_media(client, ledger, entry, files, markers, old_done, Path(temp))
+                if canary and created:
+                    tested.add(kind)
+                    print('Canary created and recorded:', kind, flush=True)
+                    if len(tested) == 2: break
                 if i % 50 == 0: print('Media processed:', i, '/', len(media), flush=True)
                 time.sleep(.5)
         counts = dict(ledger.db.execute('SELECT state, count(*) FROM receipt GROUP BY state'))

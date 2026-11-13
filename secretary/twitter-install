@@ -14,7 +14,10 @@ if [ ! -e "$root/prior-upload-progress.json" ] && [ -f /srv/secretary/karakeep-t
   install -m 600 -o secretary-karakeep -g secretary-karakeep /srv/secretary/karakeep-tool/data/state/karakeep/upload_progress.json "$root/prior-upload-progress.json"
 fi
 systemctl daemon-reload
-if [ "${1:-}" = --dry-run ]; then
-  exec runuser -u secretary-karakeep -- /usr/bin/python3 /opt/secretary/twitter-import.py --dry-run
-fi
+case "${1:-}" in
+  --dry-run|--canary)
+    exec runuser -u secretary-karakeep -- /usr/bin/python3 /opt/secretary/twitter-import.py "$1" ;;
+  '') ;;
+  *) echo 'Unknown argument' >&2; exit 2 ;;
+esac
 systemctl enable --now secretary-twitter-import.service
