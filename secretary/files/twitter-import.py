@@ -181,14 +181,14 @@ def main():
               sum(entry['ext'] == 'mp4' for entry in pending_media),
               '; existing or prior completed:', len(media) - len(pending_media), flush=True)
         if '--dry-run' in sys.argv: return
-        canary = '--canary' in sys.argv
-        tested = set()
+        canary = '--canary' in sys.argv or '--canary-image' in sys.argv
+        tested = {'video'} if '--canary-image' in sys.argv else set()
         if canary:
             items = []
         for i, item in enumerate(items, 1):
-            create_link(client, ledger, item, ids, urls)
+            created = create_link(client, ledger, item, ids, urls)
             if i % 100 == 0: print('Links processed:', i, '/', len(items), flush=True)
-            time.sleep(.2)
+            if created: time.sleep(.2)
         with tempfile.TemporaryDirectory(prefix='twitter-', dir=ROOT) as temp:
             for i, entry in enumerate(media, 1):
                 kind = 'video' if entry['ext'] == 'mp4' else 'image'
@@ -199,7 +199,7 @@ def main():
                     print('Canary created and recorded:', kind, flush=True)
                     if len(tested) == 2: break
                 if i % 50 == 0: print('Media processed:', i, '/', len(media), flush=True)
-                time.sleep(.5)
+                if created: time.sleep(.5)
         counts = dict(ledger.db.execute('SELECT state, count(*) FROM receipt GROUP BY state'))
         print('Import finished; receipts:', counts, flush=True)
 

@@ -15,7 +15,7 @@ if [ ! -e "$root/prior-upload-progress.json" ] && [ -f /srv/secretary/karakeep-t
 fi
 systemctl daemon-reload
 case "${1:-}" in
-  --dry-run|--canary)
+  --dry-run|--canary|--canary-image)
     exec runuser -u secretary-karakeep -- /usr/bin/python3 /opt/secretary/twitter-import.py "$1" ;;
   '') ;;
   *) echo 'Unknown argument' >&2; exit 2 ;;
