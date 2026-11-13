@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Run on the development server from the published dotfile_infra checkout.
+set -euo pipefail
+
+instance=web-dev
+dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+staging="$(incus exec "$instance" -- mktemp -d /tmp/onlook.XXXXXXXX)"
+trap 'incus exec "$instance" -- rm -rf "$staging"' EXIT
+incus file push "$dir/files/onlook/setup" "$instance$staging/setup"
+incus file push "$dir/files/onlook/onlook.service" "$instance$staging/onlook.service"
+incus exec "$instance" -- bash "$staging/setup" "$staging/onlook.service"

@@ -1,0 +1,19 @@
+[Unit]
+Description=Onlook development editor
+After=docker.service
+Requires=docker.service
+
+[Service]
+User=dev
+SupplementaryGroups=docker
+WorkingDirectory=/home/dev/src/onlook
+Environment=PATH=/home/dev/.local/onlook/node_modules/.bin:/usr/local/bin:/usr/bin:/bin
+Environment=SKIP_ENV_VALIDATION=1
+ExecStartPre=/home/dev/.local/onlook/start-backend
+ExecStart=/home/dev/.local/onlook/node_modules/.bin/bun --filter @onlook/web-client dev --hostname 127.0.0.1
+TimeoutStartSec=20min
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
