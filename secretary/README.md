@@ -95,8 +95,8 @@ The importer indexes all bookmark pages, tweet IDs, URLs and media filenames,
 and records create intents in a private SQLite ledger. An interrupted create
 that cannot be matched to an existing item exits 78 and requires reconciliation;
 it is never blindly retried. HTTP 403/404/410 media downloads are recorded as
-unavailable. Media is downloaded from Twitter CDN and images are saved as image
-bookmarks; video files are attached to dedicated text bookmarks. Original input
-files and pre-existing bookmarks are not deleted.
+unavailable. Still photos are downloaded from Twitter CDN and saved as image
+bookmarks. Videos and animated GIF exports are skipped and never uploaded.
+Original input files and pre-existing bookmarks are not deleted.
 The deployment also enables a host user timer that holds a sleep inhibitor
 while the container's import service is active; user lingering must be enabled.

@@ -30,7 +30,7 @@ class TwitterImportTests(unittest.TestCase):
         self.ledger.put('link:123', 'creating', {})
         with self.assertRaises(m.Ambiguous): m.create_link(None, self.ledger, item, set(), set())
     def test_media_intent_and_existing_markers(self):
-        entry = {'filename':'u_123456789012345_photo_1_20250101.jpg', 'ext':'jpg'}
+        entry = {'filename':'u_123456789012345_photo_1_20250101.jpg', 'ext':'jpg', 'media_type':'photo'}
         self.ledger.put('media:' + entry['filename'], 'creating', {})
         with self.assertRaises(m.Ambiguous):
             m.create_media(None, self.ledger, entry, set(), {}, set(), Path(self.temp.name))
@@ -44,14 +44,24 @@ class TwitterImportTests(unittest.TestCase):
         self.assertEqual(markers['foo.jpg'], ['a'])
         self.assertIn('video.mp4', files)
     def test_existing_duplicate_markers_are_skipped(self):
-        entry = {'filename': 'same.jpg', 'ext': 'jpg'}
+        entry = {'filename': 'same.jpg', 'ext': 'jpg', 'media_type': 'photo'}
         self.assertFalse(m.create_media(None, self.ledger, entry, set(), {'same.jpg': ['a', 'b']}, set(), Path(self.temp.name)))
         self.assertEqual(self.ledger.get('media:same.jpg')[0], 'done')
     def test_retry_reuses_recorded_asset(self):
-        entry = {'filename': 'same.jpg', 'ext': 'jpg', 'tweet_id': '123'}
+        entry = {'filename': 'same.jpg', 'ext': 'jpg', 'tweet_id': '123', 'media_type': 'photo'}
         self.ledger.put('media:same.jpg', 'retry', {'asset_id': 'asset', '_retry_state': 'asset', '_attempts': 1})
         client = types.SimpleNamespace(request=lambda *args: {'id': 'bookmark'})
         self.assertTrue(m.create_media(client, self.ledger, entry, set(), {}, set(), Path(self.temp.name)))
         self.assertEqual(self.ledger.get('media:same.jpg')[1]['asset_id'], 'asset')
+    def test_video_is_never_uploaded(self):
+        for entry in ({'filename':'v.mp4', 'ext':'mp4', 'media_type':'video'},
+                      {'filename':'v.jpg', 'ext':'jpg', 'media_type':'video'},
+                      {'filename':'v.mp4', 'ext':'mp4', 'media_type':'photo'},
+                      {'filename':'v.gif', 'ext':'gif', 'media_type':'animated_gif'}):
+            self.assertFalse(m.create_media(None, self.ledger, entry, set(), {}, set(), Path(self.temp.name)))
+            self.assertEqual(self.ledger.get('media:' + entry['filename'])[0], None)
+        disguised = {'filename':'x.jpg', 'ext':'jpg', 'media_type':'photo', 'url':'https://video.twimg.com/x'}
+        with self.assertRaises(ValueError):
+            m.create_media(None, self.ledger, disguised, set(), {}, set(), Path(self.temp.name))
 
 if __name__ == '__main__': unittest.main()

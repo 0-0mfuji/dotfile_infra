@@ -33,17 +33,23 @@ account = pwd.getpwnam('secretary')
 for root, text in ((pathlib.Path('/home/secretary/.nanomuse/skills'), source),
                    (pathlib.Path('/home/secretary/.dsh/skills'), source.replace('secretary_tools__', 'mcp__secretary_tools__'))):
     target = root / 'karakeep-twitter-import' / 'SKILL.md'
+    is_dsh = root.parent.name == '.dsh'
+    stamp = root / '.secretary-managed.json' if is_dsh else pathlib.Path('/opt/secretary/skills-manifest.json')
+    manifest = json.loads(stamp.read_text()) if stamp.exists() else {}
     if target.exists() and target.read_text() != text:
-        raise SystemExit('Existing customized skill preserved: ' + str(target))
+        previous = manifest.get('karakeep-twitter-import')
+        if not is_dsh and previous is None:
+            previous = 'ef6a684c0594785c0f149c8ec0365ca1866ea03918b7e856d7fc2bfe378b51a0'
+        if hashlib.sha256(target.read_bytes()).hexdigest() != previous:
+            raise SystemExit('Existing customized skill preserved: ' + str(target))
     target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     target.write_text(text)
     os.chmod(target.parent, 0o700); os.chmod(target, 0o600)
     os.chown(target.parent, account.pw_uid, account.pw_gid); os.chown(target, account.pw_uid, account.pw_gid)
-    if root.name == 'skills' and root.parent.name == '.dsh':
-        stamp = root / '.secretary-managed.json'
-        manifest = json.loads(stamp.read_text()) if stamp.exists() else {}
-        manifest['karakeep-twitter-import'] = hashlib.sha256(text.encode()).hexdigest()
-        stamp.write_text(json.dumps(manifest, indent=2)); os.chmod(stamp, 0o600)
+    manifest['karakeep-twitter-import'] = hashlib.sha256(text.encode()).hexdigest()
+    stamp.write_text(json.dumps(manifest, indent=2))
+    if is_dsh:
+        os.chmod(stamp, 0o600)
         os.chown(stamp, account.pw_uid, account.pw_gid)
 PY
 systemctl enable secretary-pipeline-narou.service

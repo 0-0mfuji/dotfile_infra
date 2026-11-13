@@ -134,6 +134,9 @@ def create_link(client, ledger, item, ids, urls):
 
 
 def create_media(client, ledger, entry, files, markers, old_done, tmpdir):
+    # Only still photographs are permitted, even if the caller forgot to filter.
+    if entry.get('media_type') != 'photo' or entry.get('ext', '').lower() not in ('jpg', 'jpeg', 'png', 'gif'):
+        return False
     name = entry['filename']; key = 'media:' + name
     state, receipt = ledger.get(key)
     if state == 'failed': return False
@@ -146,9 +149,7 @@ def create_media(client, ledger, entry, files, markers, old_done, tmpdir):
     if state == 'done' or name in old_done: return False
     if marker_matches:
         receipt['bookmark_id'] = marker_matches[0]
-        if entry['ext'] != 'mp4':
-            ledger.put(key, 'done', receipt); return False
-        state = 'created'
+        ledger.put(key, 'done', receipt); return False
     elif name in files:
         ledger.put(key, 'done', {}); return False
     elif state == 'creating':
@@ -156,7 +157,7 @@ def create_media(client, ledger, entry, files, markers, old_done, tmpdir):
     if state == 'unavailable': return False
     if state not in ('asset', 'created'):
         u = urllib.parse.urlsplit(entry['url'])
-        if u.scheme != 'https' or u.hostname not in ('pbs.twimg.com', 'video.twimg.com') or Path(name).name != name:
+        if u.scheme != 'https' or u.hostname != 'pbs.twimg.com' or Path(name).name != name:
             raise ValueError('Invalid media source')
         path = tmpdir / name
         try:
@@ -172,18 +173,9 @@ def create_media(client, ledger, entry, files, markers, old_done, tmpdir):
     if state != 'created':
         ledger.put(key, 'creating', receipt)
         note = f'filename:{name} tweet_id:{entry["tweet_id"]}'
-        if entry['ext'] == 'mp4':
-            value = {'type': 'text', 'text': 'Twitter video: ' + entry['tweet_id'], 'note': note, 'source': 'api'}
-        else:
-            value = {'type': 'asset', 'assetType': 'image', 'assetId': receipt['asset_id'], 'fileName': name, 'note': note, 'source': 'api'}
+        value = {'type': 'asset', 'assetType': 'image', 'assetId': receipt['asset_id'], 'fileName': name, 'note': note, 'source': 'api'}
         result = client.request('POST', '/api/v1/bookmarks', value)
         receipt['bookmark_id'] = result['id']; ledger.put(key, 'created', receipt)
-    if entry['ext'] == 'mp4':
-        if not receipt.get('asset_id'): raise Ambiguous('Video asset ID missing; reconcile before retry')
-        bid = urllib.parse.quote(receipt['bookmark_id'], safe='')
-        existing = client.request('GET', '/api/v1/bookmarks/' + bid)
-        if not any(a.get('id') == receipt['asset_id'] for a in existing.get('assets', [])):
-            client.request('POST', '/api/v1/bookmarks/' + bid + '/assets', {'id': receipt['asset_id'], 'assetType': 'userUploaded'})
     ledger.put(key, 'done', receipt); files.add(name)
     return True
 
@@ -195,7 +187,8 @@ def main():
         client = Client(json.loads(Path('/etc/secretary-karakeep.json').read_text()))
         ledger = Ledger(ROOT / 'receipts.sqlite3')
         tweets = json.loads((ROOT / 'input/twitter.json').read_text())
-        media = common.parse_media_urls_txt(str(ROOT / 'input/media-urls.txt'))
+        all_media = common.parse_media_urls_txt(str(ROOT / 'input/media-urls.txt'))
+        media = [entry for entry in all_media if entry['media_type'] == 'photo' and entry['ext'].lower() in ('jpg', 'jpeg', 'png', 'gif')]
         old_file = ROOT / 'prior-upload-progress.json'
         old = json.loads(old_file.read_text()) if old_file.exists() else {}
         old_done = {k for k, v in old.items() if v.get('status') == 'done'}
@@ -203,14 +196,11 @@ def main():
         ids, urls, files, markers = snapshot_index(bookmarks)
         print('Snapshot:', len(bookmarks), 'bookmarks;', len(ids), 'tweet IDs;', len(files), 'media filenames', flush=True)
         items = register_tweets.collect_items_to_register(tweets, ids, urls, False, False)
-        print('Input:', len(tweets), 'tweets;', len(media), 'media; candidate links:', len(items), flush=True)
+        print('Input:', len(tweets), 'tweets;', len(media), 'photos;', len(all_media) - len(media), 'video or other media skipped; candidate links:', len(items), flush=True)
         pending_media = [entry for entry in media if entry['filename'] not in files | old_done]
-        print('Media pending:', len(pending_media), 'including videos:',
-              sum(entry['ext'] == 'mp4' for entry in pending_media),
-              '; existing or prior completed:', len(media) - len(pending_media), flush=True)
+        print('Photos pending:', len(pending_media), '; existing or prior completed:', len(media) - len(pending_media), flush=True)
         if '--dry-run' in sys.argv: return
         canary = '--canary' in sys.argv or '--canary-image' in sys.argv
-        tested = {'video'} if '--canary-image' in sys.argv else set()
         if canary:
             items = []
         for i, item in enumerate(items, 1):
@@ -219,8 +209,6 @@ def main():
             if created: time.sleep(.2)
         with tempfile.TemporaryDirectory(prefix='twitter-', dir=ROOT) as temp:
             for i, entry in enumerate(media, 1):
-                kind = 'video' if entry['ext'] == 'mp4' else 'image'
-                if canary and kind in tested: continue
                 try:
                     created = create_media(client, ledger, entry, files, markers, old_done, Path(temp))
                 except Ambiguous:
@@ -237,9 +225,8 @@ def main():
                     print('Media error:', type(error).__name__, 'attempt', attempts, flush=True)
                     continue
                 if canary and created:
-                    tested.add(kind)
-                    print('Canary created and recorded:', kind, flush=True)
-                    if len(tested) == 2: break
+                    print('Canary created and recorded: photo', flush=True)
+                    break
                 if i % 50 == 0: print('Media processed:', i, '/', len(media), flush=True)
                 if created: time.sleep(.5)
         counts = dict(ledger.db.execute('SELECT state, count(*) FROM receipt GROUP BY state'))
