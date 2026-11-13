@@ -24,8 +24,30 @@ install -d -m 755 /etc/tmpfiles.d
 install -m 644 "$DIR/files/secretary-pipeline.conf" /etc/tmpfiles.d/
 systemd-tmpfiles --create /etc/tmpfiles.d/secretary-pipeline.conf
 systemctl daemon-reload
-systemctl enable secretary-pipeline-gpu.service secretary-pipeline-modal.service secretary-pipeline-narou.service secretary-pipeline-upload.timer
-for unit in secretary-pipeline-gpu.service secretary-pipeline-modal.service secretary-pipeline-narou.service secretary-pipeline-upload.timer; do
+systemctl disable --now secretary-pipeline-upload.timer secretary-pipeline-gpu.service secretary-pipeline-modal.service
+systemctl stop secretary-pipeline-upload.service
+python3 - "$DIR/skills/karakeep-twitter-import/SKILL.md" <<'PY'
+import hashlib, json, os, pathlib, pwd, sys
+source = pathlib.Path(sys.argv[1]).read_text()
+account = pwd.getpwnam('secretary')
+for root, text in ((pathlib.Path('/home/secretary/.nanomuse/skills'), source),
+                   (pathlib.Path('/home/secretary/.dsh/skills'), source.replace('secretary_tools__', 'mcp__secretary_tools__'))):
+    target = root / 'karakeep-twitter-import' / 'SKILL.md'
+    if target.exists() and target.read_text() != text:
+        raise SystemExit('Existing customized skill preserved: ' + str(target))
+    target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    target.write_text(text)
+    os.chmod(target.parent, 0o700); os.chmod(target, 0o600)
+    os.chown(target.parent, account.pw_uid, account.pw_gid); os.chown(target, account.pw_uid, account.pw_gid)
+    if root.name == 'skills' and root.parent.name == '.dsh':
+        stamp = root / '.secretary-managed.json'
+        manifest = json.loads(stamp.read_text()) if stamp.exists() else {}
+        manifest['karakeep-twitter-import'] = hashlib.sha256(text.encode()).hexdigest()
+        stamp.write_text(json.dumps(manifest, indent=2)); os.chmod(stamp, 0o600)
+        os.chown(stamp, account.pw_uid, account.pw_gid)
+PY
+systemctl enable secretary-pipeline-narou.service
+for unit in secretary-pipeline-narou.service; do
   if [ "$(systemctl show -p SubState --value "$unit")" = auto-restart ]; then
     systemctl restart "$unit"
   else

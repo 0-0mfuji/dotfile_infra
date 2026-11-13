@@ -31,11 +31,11 @@ After updating the host checkout with `git pull --ff-only`, run
 `./secretary/pipeline-deploy`. It installs only inside `secretary-dev`.
 No host services or public ports are added.
 
-The container enables `secretary-pipeline-gpu.service` (medical examination
-PDFs first, then PLaMo English/Japanese article and Kandel copies),
-`secretary-pipeline-narou.service` (fixed existing 2,000-candidate library,
-3-second request delay), and `secretary-pipeline-upload.timer`.
-They resume on container boot; completed input hashes/output files are reused.
+The installer disables and stops the GPU and Modal translation workers and the
+translation upload timer. It enables `secretary-pipeline-narou.service` (fixed
+existing 2,000-candidate library, 3-second request delay), which resumes on boot.
+The following describes the retained translation pipeline when started manually;
+completed input hashes/output files are reused.
 GPU workers share the existing `translation.lock`. PLaMo retains its model in
 one process and checkpoints each sentence. Its source/model hash prevents
 using translations from a different input or model revision.
