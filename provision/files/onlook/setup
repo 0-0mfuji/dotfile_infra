@@ -29,7 +29,7 @@ if [ "$(run_dev git -C "$repo" rev-parse --verify HEAD 2>/dev/null || true)" != 
 fi
 
 cd "$repo"
-run_dev bun install --frozen-lockfile
+run_dev bun install --no-save
 if [ ! -x node_modules/.bin/supabase ]; then
   run_dev node node_modules/supabase/scripts/postinstall.js
 fi
