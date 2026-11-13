@@ -114,7 +114,10 @@ def create_media(client, ledger, entry, files, markers, old_done, tmpdir):
     name = entry['filename']; key = 'media:' + name
     state, receipt = ledger.get(key)
     marker_matches = markers.get(name, [])
-    if len(marker_matches) > 1: raise Ambiguous('Duplicate media marker; reconcile before retry')
+    # Pre-existing duplicates must never cause another upload. Do not alter them.
+    if len(marker_matches) > 1:
+        ledger.put(key, 'done', {'existing_matches': len(marker_matches)})
+        return False
     if state == 'done' or name in old_done: return False
     if marker_matches:
         receipt['bookmark_id'] = marker_matches[0]

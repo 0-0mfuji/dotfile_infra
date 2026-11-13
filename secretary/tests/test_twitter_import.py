@@ -42,5 +42,9 @@ class TwitterImportTests(unittest.TestCase):
         ids, urls, files, markers = m.snapshot_index(data)
         self.assertEqual(ids, {'123'}); self.assertIn('foo.jpg', files)
         self.assertEqual(markers['foo.jpg'], ['a'])
+    def test_existing_duplicate_markers_are_skipped(self):
+        entry = {'filename': 'same.jpg', 'ext': 'jpg'}
+        self.assertFalse(m.create_media(None, self.ledger, entry, set(), {'same.jpg': ['a', 'b']}, set(), Path(self.temp.name)))
+        self.assertEqual(self.ledger.get('media:same.jpg')[0], 'done')
 
 if __name__ == '__main__': unittest.main()

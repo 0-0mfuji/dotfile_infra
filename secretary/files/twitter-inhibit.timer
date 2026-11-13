@@ -1,0 +1,11 @@
+[Unit]
+Description=Watch the Twitter import for suspend inhibition
+
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=30s
+AccuracySec=5s
+Unit=twitter-inhibit.service
+
+[Install]
+WantedBy=timers.target

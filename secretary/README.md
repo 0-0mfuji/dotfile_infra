@@ -98,3 +98,5 @@ it is never blindly retried. HTTP 403/404/410 media downloads are recorded as
 unavailable. Media is downloaded from Twitter CDN and images are saved as image
 bookmarks; video files are attached to dedicated text bookmarks. Original input
 files and pre-existing bookmarks are not deleted.
+The deployment also enables a host user timer that holds a sleep inhibitor
+while the container's import service is active; user lingering must be enabled.

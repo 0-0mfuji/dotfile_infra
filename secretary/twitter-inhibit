@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# An Incus container cannot hold the host's sleep inhibitor itself.
+if incus exec secretary-dev -- systemctl is-active --quiet secretary-twitter-import.service 2>/dev/null; then
+  exec systemd-inhibit --what=sleep --mode=block --who=twitter-import \
+    --why='Importing Twitter bookmarks and media' \
+    bash -c 'while incus exec secretary-dev -- systemctl is-active --quiet secretary-twitter-import.service 2>/dev/null; do sleep 30; done'
+fi

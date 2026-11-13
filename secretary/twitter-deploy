@@ -17,3 +17,10 @@ for file in twitter-import.py secretary-twitter-import.service; do
 done
 incus file push "$DIR/twitter-install" "$instance$stage/twitter-install"
 incus exec "$instance" -- bash "$stage/twitter-install" "$@"
+if [ "$#" -eq 0 ]; then
+  install -d -m 700 "$HOME/.config/systemd/user"
+  install -m 644 "$DIR/files/twitter-inhibit.service" "$DIR/files/twitter-inhibit.timer" "$HOME/.config/systemd/user/"
+  systemctl --user daemon-reload
+  systemctl --user enable --now twitter-inhibit.timer
+  systemctl --user start twitter-inhibit.service
+fi

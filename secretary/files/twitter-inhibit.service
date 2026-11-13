@@ -1,0 +1,6 @@
+[Unit]
+Description=Prevent suspend while the Twitter import is active
+
+[Service]
+Type=simple
+ExecStart=%h/dotfile_infra/secretary/twitter-inhibit
