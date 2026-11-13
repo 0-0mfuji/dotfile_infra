@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Resumable wrapper around TwitterBookmark_to_karakeep, with durable create intents."""
 import fcntl
+import http.client
 import json
 import mimetypes
 import os
@@ -57,8 +58,27 @@ class Client:
         safe = re.sub(r'[^A-Za-z0-9_.-]', '_', filename)
         content_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
         head = (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="{safe}"\r\nContent-Type: {content_type}\r\n\r\n').encode()
-        body = head + path.read_bytes() + f'\r\n--{boundary}--\r\n'.encode()
-        return self.request('POST', '/api/v1/assets', body, 'multipart/form-data; boundary=' + boundary)['assetId']
+        tail = f'\r\n--{boundary}--\r\n'.encode()
+        parsed = urllib.parse.urlsplit(self.base)
+        if parsed.scheme not in ('http', 'https') or not parsed.hostname:
+            raise ValueError('Invalid Karakeep URL')
+        connection_type = http.client.HTTPSConnection if parsed.scheme == 'https' else http.client.HTTPConnection
+        connection = connection_type(parsed.hostname, parsed.port, timeout=90)
+        try:
+            connection.putrequest('POST', parsed.path.rstrip('/') + '/api/v1/assets')
+            connection.putheader('Authorization', 'Bearer ' + self.key)
+            connection.putheader('Content-Type', 'multipart/form-data; boundary=' + boundary)
+            connection.putheader('Content-Length', str(len(head) + path.stat().st_size + len(tail)))
+            connection.endheaders()
+            connection.send(head)
+            with path.open('rb') as data:
+                while chunk := data.read(1024 * 1024): connection.send(chunk)
+            connection.send(tail)
+            response = connection.getresponse()
+            if response.status != 200: raise RuntimeError('Asset upload HTTP ' + str(response.status))
+            return json.load(response)['assetId']
+        finally:
+            connection.close()
 
 class Ledger:
     def __init__(self, path):
@@ -116,6 +136,8 @@ def create_link(client, ledger, item, ids, urls):
 def create_media(client, ledger, entry, files, markers, old_done, tmpdir):
     name = entry['filename']; key = 'media:' + name
     state, receipt = ledger.get(key)
+    if state == 'failed': return False
+    if state == 'retry': state = receipt.pop('_retry_state', None)
     marker_matches = markers.get(name, [])
     # Pre-existing duplicates must never cause another upload. Do not alter them.
     if len(marker_matches) > 1:
@@ -199,7 +221,21 @@ def main():
             for i, entry in enumerate(media, 1):
                 kind = 'video' if entry['ext'] == 'mp4' else 'image'
                 if canary and kind in tested: continue
-                created = create_media(client, ledger, entry, files, markers, old_done, Path(temp))
+                try:
+                    created = create_media(client, ledger, entry, files, markers, old_done, Path(temp))
+                except Ambiguous:
+                    raise
+                except Exception as error:
+                    key = 'media:' + entry['filename']
+                    state, receipt = ledger.get(key)
+                    if state == 'retry': state = receipt.get('_retry_state')
+                    if state == 'creating':
+                        raise Ambiguous('Media create response lost; reconcile before retry') from error
+                    attempts = receipt.get('_attempts', 0) + 1
+                    receipt.update(_attempts=attempts, _retry_state=state, _error=type(error).__name__)
+                    ledger.put(key, 'failed' if attempts >= 3 else 'retry', receipt)
+                    print('Media error:', type(error).__name__, 'attempt', attempts, flush=True)
+                    continue
                 if canary and created:
                     tested.add(kind)
                     print('Canary created and recorded:', kind, flush=True)
@@ -208,6 +244,8 @@ def main():
                 if created: time.sleep(.5)
         counts = dict(ledger.db.execute('SELECT state, count(*) FROM receipt GROUP BY state'))
         print('Import finished; receipts:', counts, flush=True)
+        if counts.get('retry'): raise RuntimeError('Some media need retry')
+        if counts.get('failed'): raise Ambiguous('Some media failed repeatedly and need review')
 
 if __name__ == '__main__':
     try: main()

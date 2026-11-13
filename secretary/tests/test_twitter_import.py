@@ -47,5 +47,11 @@ class TwitterImportTests(unittest.TestCase):
         entry = {'filename': 'same.jpg', 'ext': 'jpg'}
         self.assertFalse(m.create_media(None, self.ledger, entry, set(), {'same.jpg': ['a', 'b']}, set(), Path(self.temp.name)))
         self.assertEqual(self.ledger.get('media:same.jpg')[0], 'done')
+    def test_retry_reuses_recorded_asset(self):
+        entry = {'filename': 'same.jpg', 'ext': 'jpg', 'tweet_id': '123'}
+        self.ledger.put('media:same.jpg', 'retry', {'asset_id': 'asset', '_retry_state': 'asset', '_attempts': 1})
+        client = types.SimpleNamespace(request=lambda *args: {'id': 'bookmark'})
+        self.assertTrue(m.create_media(client, self.ledger, entry, set(), {}, set(), Path(self.temp.name)))
+        self.assertEqual(self.ledger.get('media:same.jpg')[1]['asset_id'], 'asset')
 
 if __name__ == '__main__': unittest.main()
