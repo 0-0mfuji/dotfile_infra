@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[ "$(id -u)" -eq 0 ] || exit 1
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+root=/var/lib/secretary-karakeep/twitter-import
+install -d -m 700 -o secretary-karakeep -g secretary-karakeep "$root" "$root/input"
+install -d -m 755 /opt/secretary/twitter-bookmark-tool
+for file in common.py register_tweets.py upload_media.py; do
+  install -m 644 "$DIR/$file" "/opt/secretary/twitter-bookmark-tool/$file"
+done
+install -m 644 "$DIR/twitter-import.py" /opt/secretary/twitter-import.py
+install -m 644 "$DIR/secretary-twitter-import.service" /etc/systemd/system/
+if [ ! -e "$root/prior-upload-progress.json" ] && [ -f /srv/secretary/karakeep-tool/data/state/karakeep/upload_progress.json ]; then
+  install -m 600 -o secretary-karakeep -g secretary-karakeep /srv/secretary/karakeep-tool/data/state/karakeep/upload_progress.json "$root/prior-upload-progress.json"
+fi
+systemctl daemon-reload
+if [ "${1:-}" = --dry-run ]; then
+  exec runuser -u secretary-karakeep -- /usr/bin/python3 /opt/secretary/twitter-import.py --dry-run
+fi
+systemctl enable --now secretary-twitter-import.service

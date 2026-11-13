@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Run on the development host after pulling this repository.
+set -euo pipefail
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+commit=e96f405baa4823a28a064b039170225454e942d1
+instance=secretary-dev
+work="$(mktemp -d)"
+stage="$(incus exec "$instance" -- mktemp -d /tmp/secretary-twitter.XXXXXXXX)"
+trap 'rm -rf "$work"; incus exec "$instance" -- rm -rf "$stage"' EXIT
+git clone -q --no-checkout git@github.com:0-0mfuji/TwitterBookmark_to_karakeep.git "$work/upstream"
+git -C "$work/upstream" archive "$commit" common.py register_tweets.py upload_media.py | tar -x -C "$work"
+for file in common.py register_tweets.py upload_media.py; do
+  incus file push "$work/$file" "$instance$stage/$file"
+done
+for file in twitter-import.py secretary-twitter-import.service; do
+  incus file push "$DIR/files/$file" "$instance$stage/$file"
+done
+incus file push "$DIR/twitter-install" "$instance$stage/twitter-install"
+incus exec "$instance" -- bash "$stage/twitter-install" "$@"

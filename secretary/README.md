@@ -81,3 +81,20 @@ container. Stop `secretary-pipeline-upload.service` too if an upload is active.
 Disabling the corresponding units prevents startup on subsequent boots.
 The existing host idle policy detects GPU work and the existing OCR/download
 executables; this deployment does not alter the host suspend configuration.
+
+### Twitter bookmark import
+
+`./secretary/twitter-deploy --dry-run` installs the pinned
+`TwitterBookmark_to_karakeep` source and checks the complete Karakeep snapshot
+without creating bookmarks. After checking the counts, run
+`./secretary/twitter-deploy` to enable the restartable import service. Input
+files are private under `/var/lib/secretary-karakeep/twitter-import/input/`;
+existing upload progress is copied once. Status: `systemctl status
+secretary-twitter-import.service` and `journalctl -u secretary-twitter-import.service`.
+The importer indexes all bookmark pages, tweet IDs, URLs and media filenames,
+and records create intents in a private SQLite ledger. An interrupted create
+that cannot be matched to an existing item exits 78 and requires reconciliation;
+it is never blindly retried. HTTP 403/404/410 media downloads are recorded as
+unavailable. Media is downloaded from Twitter CDN and images are saved as image
+bookmarks; video files are attached to dedicated text bookmarks. Original input
+files and pre-existing bookmarks are not deleted.
