@@ -530,7 +530,7 @@ install_blender() {
 }
 
 # web-dev 専用: Webアプリ開発 (Node + Python)。プロジェクト (igakutteru) の依存は、プロジェクト側の lockfile で入れる。
-#   ここで入れるのは、コンテナ共通で要る道具だけ: git-lfs / zip / corepack(pnpm) / uv + Python / turso。
+#   ここで入れるのは、コンテナ共通で要る道具だけ: git-lfs / zip / corepack(pnpm) / Bun / uv + Python / turso。
 #   wrangler は apps/worker の devDependency、Playwright の Chromium は `playwright install --with-deps chromium` (プロジェクト側)。
 WEB_PKGS=(
   git-lfs zip unzip zstd
@@ -572,6 +572,26 @@ install_zola() {
   log "zola $ZOLA_VERSION: installed"
 }
 
+install_bun() {
+  if [ -x /usr/local/bin/bun ] && [ "$(/usr/local/bin/bun --version 2>/dev/null)" = "$BUN_VERSION" ]; then
+    log "bun $BUN_VERSION: ok"; return
+  fi
+  local f="bun-linux-x64-baseline.zip" tmp
+  tmp="$(mktemp -d)"
+  if ! curl -fsSL "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/$f" -o "$tmp/$f"; then
+    log "bun: download FAILED"; rm -rf "$tmp"; return 1
+  fi
+  if ! echo "$BUN_SHA256  $tmp/$f" | sha256sum -c - >/dev/null; then
+    log "bun: checksum FAILED"; rm -rf "$tmp"; return 1
+  fi
+  if ! unzip -q "$tmp/$f" -d "$tmp"; then
+    log "bun: extraction FAILED"; rm -rf "$tmp"; return 1
+  fi
+  sudo install -m 755 "$tmp/bun-linux-x64-baseline/bun" /usr/local/bin/bun
+  rm -rf "$tmp"
+  log "bun $(/usr/local/bin/bun --version): installed"
+}
+
 install_web() {
   # Headless Chromium の ANGLE/Vulkan 用。ホストと同じ Debian NVIDIA 版を使う。
   if [ -e /dev/nvidiactl ]; then
@@ -594,6 +614,7 @@ install_web() {
   fi
   git lfs install --skip-repo >/dev/null 2>&1 || log "web: git lfs install FAILED"
   sudo corepack enable >/dev/null 2>&1 || true   # pnpm を、プロジェクトの packageManager の版で使えるようにする
+  install_bun
   install_uv
   uv python install "$WEB_PYTHON_VERSION" >/dev/null 2>&1 || log "web: uv python install $WEB_PYTHON_VERSION FAILED"
   install_turso
