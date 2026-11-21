@@ -7,7 +7,7 @@ source "$DIR/versions.env"
 [ "$#" -eq 0 ] || { echo "usage: secretary/install" >&2; exit 2; }
 /usr/bin/python3 "$DIR/tooling/check-idle.py"
 apt-get update
-apt-get install -y curl ca-certificates git unzip python3 python3-yaml age
+apt-get install -y curl ca-certificates git gh unzip python3 python3-yaml age
 id secretary >/dev/null 2>&1 || useradd --create-home --shell /bin/bash secretary
 id secretary-notes >/dev/null 2>&1 || useradd --system --home-dir /var/lib/secretary-notes --create-home --shell /usr/sbin/nologin secretary-notes
 id secretary-timetree >/dev/null 2>&1 || useradd --system --home-dir /var/lib/secretary-timetree --create-home --shell /usr/sbin/nologin secretary-timetree
@@ -61,6 +61,7 @@ dev ALL=(secretary) NOPASSWD: /usr/local/bin/secretary *
 dev ALL=(root) NOPASSWD: /usr/local/bin/secretary-karakeep *
 SUDO
 chmod 440 /etc/sudoers.d/secretary-operator
+bash "$DIR/install-github-cli"
 systemctl daemon-reload
 bash "$DIR/retire-hermes"
 bash "$DIR/karakeep-install"

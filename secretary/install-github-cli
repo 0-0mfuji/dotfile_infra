@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# 秘書コンテナ内で root として実行する。
+set -euo pipefail
+[ "$(id -u)" -eq 0 ] || { echo 'コンテナ内でrootとして実行してください' >&2; exit 1; }
+
+if [ ! -x /usr/bin/gh ]; then
+  apt-get update
+  apt-get install -y gh
+fi
+
+policy="$(mktemp)"
+trap 'rm -f "$policy"' EXIT
+cat > "$policy" <<'SUDO'
+dev ALL=(secretary) NOPASSWD: /usr/bin/gh auth status --hostname github.com, /usr/bin/gh auth login --hostname github.com
+SUDO
+visudo -cf "$policy"
+install -m 440 "$policy" /etc/sudoers.d/secretary-github
