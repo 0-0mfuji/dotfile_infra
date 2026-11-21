@@ -8,6 +8,13 @@ dev_network  = "devbr0"        # Development Network用のbridge名
 ssh_public_key = "ssh-ed25519 AAAA... you@macbook"
 
 dev_instances = {
+  learn = {
+    cpu       = 4
+    memory    = "16GiB" # DeepSeek Harness の初回ビルド用
+    disk_size = "100GiB"
+    gpu       = false
+    # ip    = "<空いている開発ネットワーク内の固定IPv4>"
+  }
   lang = {
     cpu       = 4
     memory    = "4GiB"

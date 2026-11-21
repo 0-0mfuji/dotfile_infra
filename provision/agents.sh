@@ -181,7 +181,12 @@ install_instruction_files() {
   [ -e "$HOME/.codex/AGENTS.md" ] || { cp "$DIR/files/AGENTS.md" "$HOME/.codex/AGENTS.md"; log "~/.codex/AGENTS.md created"; }
   # DeepSeek Harnessは、全セッションの最初のリクエストに ~/.dsh/AGENTS.md を読み込む
   mkdir -p "$HOME/.dsh"
-  [ -e "$HOME/.dsh/AGENTS.md" ] || { cp "$DIR/files/DSH_AGENTS.md" "$HOME/.dsh/AGENTS.md"; log "~/.dsh/AGENTS.md created"; }
+  local dsh_instructions=DSH_AGENTS.md
+  if [ "${INSTANCE:-}" = learn-dev ]; then dsh_instructions=learn-AGENTS.md; fi
+  [ -e "$HOME/.dsh/AGENTS.md" ] || { cp "$DIR/files/$dsh_instructions" "$HOME/.dsh/AGENTS.md"; log "~/.dsh/AGENTS.md created"; }
+  if [ "${INSTANCE:-}" = learn-dev ] && ! grep -Fxq '## 教材をブラウザで開く' "$HOME/.dsh/AGENTS.md"; then
+    cat "$DIR/files/learn-material-instructions.md" >> "$HOME/.dsh/AGENTS.md"
+  fi
 }
 
 REBUILT=0
@@ -622,6 +627,34 @@ install_web() {
   log "web: node $(node -v) / uv $(uv --version | awk '{print $2}') / python $("$(uv python find "$WEB_PYTHON_VERSION" 2>/dev/null)" --version 2>/dev/null | awk '{print $2}') / git-lfs $(git lfs version 2>/dev/null | awk '{print $1}' | cut -d/ -f2): ok"
 }
 
+install_learn() {
+  local packages=(fd-find ripgrep pdfgrep smbclient ocrmypdf tesseract-ocr-jpn tesseract-ocr-eng)
+  local missing=() package
+  for package in "${packages[@]}"; do
+    dpkg-query -W -f='${Status}\n' "$package" 2>/dev/null | grep -qx 'install ok installed' || missing+=("$package")
+  done
+  if [ "${#missing[@]}" -gt 0 ]; then
+    sudo apt-get update -qq
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${missing[@]}"
+  fi
+  sudo ln -sfn /usr/bin/fdfind /usr/local/bin/fd
+  (
+    umask 077
+    mkdir -p "$HOME/learn/materials/nas" "$HOME/learn/notes"
+    # noclobber で再プロビジョニング時にも学習メモを残す。
+    if [ ! -e "$HOME/learn/notes/質問.md" ]; then
+      (set -o noclobber; cat "$DIR/files/learn-questions.md" > "$HOME/learn/notes/質問.md")
+    fi
+  )
+  sudo install -m 755 "$DIR/files/learn-material.mjs" /usr/local/bin/learn-material.mjs
+  sudo ln -sfn /usr/local/bin/learn-material.mjs /usr/local/bin/learn-material
+  sudo install -m 644 "$DIR/files/learn-material.service" /etc/systemd/system/learn-material.service
+  sudo systemctl daemon-reload
+  sudo systemctl enable learn-material.service
+  sudo systemctl restart learn-material.service
+  log "learn: search tools and ~/learn ready"
+}
+
 # shellcheck source=./flutter.sh
 source "$DIR/flutter.sh"
 
@@ -634,6 +667,7 @@ install_toolchains() {
     blender-dev) install_blender ;;
     web-dev) install_web ;;
     flutter-dev) install_flutter; install_android ;;
+    learn-dev) install_learn ;;
     *) log "toolchain: none for '${INSTANCE:-?}'" ;;
   esac
 }

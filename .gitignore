@@ -2,6 +2,7 @@
 .terraform.tfstate.lock.info
 *.tfstate
 *.tfstate.*
+*.tfplan
 terraform.tfvars
 terraform.tfvars.bak-*
 ._*

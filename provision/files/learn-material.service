@@ -1,0 +1,17 @@
+[Unit]
+Description=Learning materials browser preview
+After=network.target
+
+[Service]
+User=dev
+Environment=HOME=/home/dev
+ExecStart=/usr/local/bin/node /usr/local/bin/learn-material --serve
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

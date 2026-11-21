@@ -131,6 +131,12 @@ MacのWebプレビューとAndroidエミュレーターへのAPK転送は
 
 GitHub CLI (`gh`) は全コンテナの共通プロビジョニングで導入する。既存コンテナには `./provision/run` で反映する (稼働中の全 `*-dev`。停止中のものは起動後に実行)。認証は各コンテナで行い、Mac の `dev` 起動時に未認証なら案内する。
 
+### 学習用コンテナ
+
+`terraform.tfvars.example` の `learn` を既存の `dev_instances` に追加し、空いている固定 IP を指定する。
+作成後は `systemd-inhibit --what=sleep --mode=block ./provision/run learn-dev` で DSH、教材検索、PDF OCR、Synology 接続用のツール、学習メモのひな形を導入する。
+Mac の SSH 設定と使い方は [学習用コンテナの手順](https://github.com/0-0mfuji/dotfiles_server/blob/main/docs/learn.md) を参照。
+
 ### 私用秘書（NanoMuse）
 
 `systemd-inhibit --what=sleep --mode=block ./provision/run secretary-dev` で導入・更新する。
